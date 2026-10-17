@@ -8,7 +8,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ibrahim-jaafar.github.io/">
 <meta property="og:title" content="Ibrahim Jaafar · AI Specialist">
-<meta property="og:description" content="Automation, agents and internal tools that help teams work faster, with less repetitive work.">
+<meta property="og:description" content="Automation, AI agents and business systems that help teams work faster, with less repetitive work.">
 <meta property="og:image" content="https://ibrahim-jaafar.github.io/img/photo.jpg">
 <meta name="twitter:card" content="summary">
 <link rel="icon" href="img/photo.jpg">
@@ -55,6 +55,11 @@ h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif}
 .wall .row:nth-child(3){animation-duration:130s}
 .wall img{margin-right:22px;width:360px;height:220px;object-fit:cover;object-position:top;border-radius:14px;border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 50px rgba(0,0,0,.55)}
 @keyframes drift{to{transform:translateX(-50%)}}
+.totop{position:fixed;right:24px;bottom:24px;z-index:6;width:48px;height:48px;border-radius:50%;display:grid;place-items:center;
+  background:var(--grad);color:#fff;font-size:22px;line-height:1;box-shadow:0 10px 30px rgba(0,0,0,.45);
+  opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .25s,transform .25s}
+.totop.show{opacity:1;transform:none;pointer-events:auto}
+.totop:hover{color:#fff;filter:brightness(1.12)}
 header.wrap{position:relative;z-index:1}
 @media (max-width:700px){.wall{opacity:.22}.wall img{width:250px;height:155px}}
 @media (prefers-reduced-motion:reduce){.wall .row{animation:none}}
@@ -213,7 +218,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
     <img class="avatar" src="img/photo.jpg" alt="Ibrahim Jaafar" width="168" height="168">
     <div>
       <h1>Ibrahim Jaafar</h1>
-      <p class="role">AI Specialist · Automation, agents and internal tools</p>
+      <p class="role">AI Specialist · Automation, AI agents and business systems</p>
     </div>
   </div>
   <p class="lead">I turn complex operational problems into reliable AI systems, including workflow automation, multi-agent systems and secure internal platforms, and take them from first prototype to daily production use.</p>
@@ -630,6 +635,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   <div class="detail-body"></div>
 </dialog>
 
+<a class="totop" href="#top" aria-label="Back to top">&uarr;</a>
 <script>
 // Turn each project card into a compact box; the full card opens in a dialog.
 // Without JS the full cards simply stay on the page.
@@ -694,7 +700,8 @@ const spy = new IntersectionObserver(es => es.forEach(e => {
   if (e.isIntersecting && !atBottom()) mark(e.target.id);
 }), { rootMargin: '-45% 0px -50% 0px' });
 links.forEach(a => { const t = document.querySelector(a.hash); if (t) spy.observe(t); });
-addEventListener('scroll', () => { if (atBottom()) mark('contact'); }, { passive: true });
+const totop = document.querySelector('.totop');
+addEventListener('scroll', () => { if (atBottom()) mark('contact'); totop.classList.toggle('show', scrollY > 400); }, { passive: true });
 
 if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
   document.documentElement.classList.add('js');
