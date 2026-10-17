@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ibrahim Jaafar — AI Specialist</title>
+<meta name="description" content="Ibrahim Jaafar builds AI tools, agents and automations that remove repetitive work for teams.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://ibrahim-jaafar.github.io/">
+<meta property="og:title" content="Ibrahim Jaafar · AI Specialist">
+<meta property="og:description" content="Automation, agents and internal tools that help teams work faster, with less repetitive work.">
+<meta property="og:image" content="https://ibrahim-jaafar.github.io/img/photo.jpg">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="img/photo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* ponytail: dark-only on purpose, the "modern tech" look the owner chose */
+:root{
+  --bg:#07080f; --text:#eef0f7; --muted:#9aa1b8; --line:rgba(255,255,255,.08);
+  --glass:rgba(255,255,255,.035); --glass-hi:rgba(255,255,255,.06);
+  --a1:#7c5cff; --a2:#3fa9ff; --a3:#22d3ee;
+  --grad:linear-gradient(120deg,var(--a1),var(--a2) 55%,var(--a3));
+  --good:#4ade80; --bad:#fb7185;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;color:var(--text);font:16px/1.65 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;
+  background:
+    radial-gradient(900px 520px at 12% -8%,rgba(124,92,255,.22),transparent 60%),
+    radial-gradient(800px 500px at 95% 6%,rgba(63,169,255,.16),transparent 60%),
+    radial-gradient(700px 600px at 50% 110%,rgba(34,211,238,.08),transparent 60%),
+    var(--bg);
+  background-attachment:fixed}
+a{color:var(--a2);text-decoration:none}
+a:hover{color:var(--a3)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+
+/* faint grid that fades out below the hero */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+  background-size:56px 56px;-webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 30%,transparent 75%);mask-image:radial-gradient(ellipse 80% 60% at 50% 0%,#000 30%,transparent 75%)}
+h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif}
+.meta,.badge,.tags span,h2::before{font-family:"JetBrains Mono",ui-monospace,monospace}
+
+/* moving wall of screenshots behind the header */
+.wall{position:absolute;top:0;left:0;width:100%;height:min(820px,110vh);overflow:hidden;z-index:0;pointer-events:none;opacity:.32;
+  -webkit-mask-image:linear-gradient(#000 30%,transparent 95%);mask-image:linear-gradient(#000 30%,transparent 95%)}
+.wall-tilt{position:absolute;left:50%;top:-6%;width:2400px;margin-left:-1200px;display:grid;gap:22px;
+  transform:perspective(1600px) rotateX(24deg) rotateZ(-9deg)}
+.wall .row{display:flex;width:max-content;animation:drift 90s linear infinite}
+.wall .row:nth-child(2){animation-direction:reverse;animation-duration:110s;margin-left:-180px}
+.wall .row:nth-child(3){animation-duration:130s}
+.wall img{margin-right:22px;width:360px;height:220px;object-fit:cover;object-position:top;border-radius:14px;border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 50px rgba(0,0,0,.55)}
+@keyframes drift{to{transform:translateX(-50%)}}
+header.wrap{position:relative;z-index:1}
+@media (max-width:700px){.wall{opacity:.22}.wall img{width:250px;height:155px}}
+@media (prefers-reduced-motion:reduce){.wall .row{animation:none}}
+header.wrap{padding-top:48px;padding-bottom:48px}
+header .lead{max-width:none}
+.intro{display:flex;align-items:center;gap:36px;margin-bottom:28px}
+.avatar{width:176px;height:176px;flex:none;border-radius:50%;object-fit:cover;display:block;
+  padding:4px;background:var(--grad);box-shadow:0 0 60px rgba(124,92,255,.35)}
+h1{font-size:clamp(38px,6.5vw,64px);line-height:1.05;margin:0 0 12px;letter-spacing:-.03em;font-weight:700}
+.role{font-size:clamp(17px,2.2vw,21px);font-weight:600;margin:0;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{font-size:18px;margin:0 0 28px;color:#cfd3e3}
+.contact{display:flex;flex-wrap:wrap;gap:12px}
+.btn{display:inline-block;padding:11px 20px;border-radius:12px;border:1px solid var(--line);font-weight:600;color:var(--text);background:var(--glass);transition:.2s}
+.btn:hover{color:var(--text);background:var(--glass-hi);transform:translateY(-1px)}
+.btn.primary{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 30px rgba(92,120,255,.35)}
+/* one panel, four figures split by hairlines */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:44px;border:1px solid var(--line);border-radius:18px;background:var(--glass);backdrop-filter:blur(10px);overflow:hidden}
+.stat{padding:24px 26px;position:relative}
+.stat + .stat{border-left:1px solid var(--line)}
+.stat b{display:block;font-family:"Space Grotesk",Inter,sans-serif;font-size:40px;line-height:1;font-weight:600;letter-spacing:-.03em;color:var(--text)}
+.stat b small{font-size:20px;color:var(--muted);font-weight:500;margin-left:2px}
+.stat span{display:block;margin-top:10px;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);line-height:1.5}
+.stat::before{content:"";position:absolute;left:26px;top:0;width:28px;height:2px;background:var(--grad)}
+
+body{counter-reset:sec}
+section{padding:32px 0;counter-increment:sec}
+section .wrap > :last-child{margin-bottom:0}
+/* floating outline, only where there's room beside the content */
+.outline{position:fixed;left:max(20px,calc((100vw - 1040px)/2 - 210px));top:50%;transform:translateY(-50%);z-index:5;display:none;
+  flex-direction:column;gap:2px;padding:14px 10px;border:1px solid var(--line);border-radius:16px;background:rgba(10,12,22,.55);backdrop-filter:blur(12px)}
+.outline a{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);padding:6px 10px;border-radius:10px;transition:.2s}
+.outline a::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.4;transition:.2s}
+.outline a:hover{color:var(--text);background:var(--glass-hi)}
+.outline a.on{color:var(--text);background:rgba(124,92,255,.14)}
+.outline a.on::before{opacity:1;background:var(--a2);box-shadow:0 0 10px var(--a2)}
+@media (min-width:1400px){.outline{display:flex}}
+h2{font-size:clamp(30px,4.5vw,42px);margin:0 0 12px;letter-spacing:-.03em}
+h2::before{content:"0" counter(sec) " /";display:block;font-size:13px;font-weight:500;letter-spacing:.1em;margin-bottom:10px;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+/* fade-up on scroll; only when JS ran, so content never stays hidden */
+.js .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.js .reveal.in{opacity:1;transform:none}
+.sub{color:var(--muted);margin:0 0 36px}
+h3{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+.meta{color:var(--muted);font-size:13.5px;margin:0 0 14px}
+.card{border:1px solid var(--line);border-radius:18px;padding:26px;margin-bottom:20px;background:var(--glass);backdrop-filter:blur(10px);transition:transform .25s,border-color .25s,box-shadow .25s}
+.card:hover{transform:translateY(-3px);border-color:rgba(124,92,255,.45);box-shadow:0 18px 50px rgba(0,0,0,.35),0 0 0 1px rgba(124,92,255,.15)}
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.ba div{border-radius:12px;padding:13px 15px;font-size:15px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.ba .before{border-left:3px solid var(--bad)} .ba .after{border-left:3px solid var(--good)}
+.ba .label{display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+.before .label{color:var(--bad)} .after .label{color:var(--good)}
+ul{padding-left:20px;margin:8px 0}
+li{margin:5px 0}
+li::marker{color:var(--a2)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.tags span{font-size:12px;background:rgba(124,92,255,.14);color:#c4b5fd;border:1px solid rgba(124,92,255,.3);padding:3px 10px;border-radius:999px}
+.shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:18px}
+.shots img{width:100%;border-radius:12px;border:1px solid var(--line);display:block}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.grid2 .card{margin:0}
+.skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.skills div{background:var(--glass);border:1px solid var(--line);border-radius:16px;padding:20px}
+.skills b{display:block;margin-bottom:8px}
+.skills p{margin:0;color:var(--muted);font-size:15px}
+.job{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.job .meta{margin:4px 0 0}
+/* how I work: four numbered steps */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:28px;counter-reset:step}
+.steps div{position:relative;padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--glass);counter-increment:step}
+.steps div::before{content:"0" counter(step);display:block;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:var(--a2);margin-bottom:14px}
+.steps b{display:block;font-family:"Space Grotesk",Inter,sans-serif;font-size:19px;margin-bottom:8px}
+.steps p{margin:0;color:#c3c8da;font-size:14.5px}
+@media (max-width:900px){.steps{grid-template-columns:1fr 1fr}}
+@media (max-width:560px){.steps{grid-template-columns:1fr}}
+/* experience timeline */
+.timeline{list-style:none;margin:28px 0 28px;padding:0 0 0 34px;position:relative}
+.timeline::before{content:"";position:absolute;left:8px;top:8px;bottom:8px;width:2px;border-radius:2px;background:linear-gradient(var(--a1),var(--a2) 50%,rgba(255,255,255,.08))}
+.timeline li{position:relative;margin:0 0 22px;padding:22px 24px;border:1px solid var(--line);border-radius:18px;background:var(--glass)}
+.timeline li::before{content:"";position:absolute;left:-32px;top:28px;width:14px;height:14px;border-radius:50%;background:var(--bg);border:2px solid var(--muted)}
+.timeline li.now::before{border-color:var(--a2);background:var(--a2);box-shadow:0 0 0 5px rgba(63,169,255,.18),0 0 18px var(--a2)}
+.timeline .when{font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;letter-spacing:.06em;color:var(--a2)}
+.timeline h3{margin:6px 0 2px}
+.timeline .org{margin:0 0 10px;color:#c4b5fd;font-weight:600;font-size:15px}
+.timeline li p:last-child{margin:0;color:#c3c8da}
+/* Blue House: featured block at the top of Projects */
+.featured{position:relative;margin-bottom:40px;padding:30px;border-radius:24px;
+  background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,rgba(124,92,255,.7),rgba(63,169,255,.35) 50%,rgba(34,211,238,.6)) border-box;
+  border:1px solid transparent;box-shadow:0 0 80px rgba(124,92,255,.12)}
+.featured::before{content:"";position:absolute;inset:0;border-radius:inherit;background:radial-gradient(600px 240px at 0% 0%,rgba(124,92,255,.14),transparent 70%);pointer-events:none}
+.eyebrow{display:inline-block;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:#c4b5fd;padding:5px 12px;border:1px solid rgba(124,92,255,.4);border-radius:999px;background:rgba(124,92,255,.12);margin-bottom:16px}
+.featured-title{font-size:clamp(24px,3vw,30px);margin-bottom:10px}
+.featured .sub{margin-bottom:24px}
+/* compact project boxes; full card opens in a dialog */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.tile{all:unset;box-sizing:border-box;display:flex;flex-direction:column;cursor:pointer;padding:20px;border:1px solid var(--line);border-radius:18px;background:var(--glass);backdrop-filter:blur(10px);transition:transform .25s,border-color .25s,box-shadow .25s}
+.tile:hover,.tile:focus-visible{transform:translateY(-3px);border-color:rgba(124,92,255,.5);box-shadow:0 18px 50px rgba(0,0,0,.35)}
+.tile:focus-visible{outline:2px solid var(--a2);outline-offset:3px}
+.tile img{width:100%;aspect-ratio:16/9;object-fit:cover;object-position:top;border-radius:12px;border:1px solid var(--line);margin-bottom:16px}
+.tile h3{font-size:18px;margin-bottom:6px}
+.tile .meta{margin-bottom:10px;font-size:12px}
+.tile p{margin:0;color:#c3c8da;font-size:14.5px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.tile .more{margin-top:auto;padding-top:16px;font-size:13px;font-weight:600;color:var(--a2)}
+dialog.detail{width:min(880px,calc(100% - 32px));max-height:88vh;padding:0;border:1px solid var(--line);border-radius:22px;background:#0c0f1d;color:var(--text);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+dialog.detail::backdrop{background:rgba(3,4,10,.72);backdrop-filter:blur(6px)}
+body:has(dialog[open]){overflow:hidden}
+.detail .card{border:0;background:none;backdrop-filter:none;margin:0;padding:32px}
+.detail .card:hover{transform:none;box-shadow:none}
+.detail h3{font-size:26px;padding-right:48px}
+.detail .close{position:sticky;top:14px;float:right;margin:14px 14px 0 0;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--glass-hi);color:var(--text);font-size:20px;cursor:pointer;z-index:1}
+.detail .close:hover{background:rgba(255,255,255,.12)}
+/* click a screenshot to view it full screen */
+.shots img{cursor:zoom-in}
+dialog.lightbox{max-width:none;max-height:none;width:100vw;height:100vh;margin:0;padding:24px;border:0;background:rgba(3,4,10,.92);display:none;align-items:center;justify-content:center;cursor:zoom-out}
+dialog.lightbox[open]{display:flex}
+dialog.lightbox::backdrop{background:transparent}
+dialog.lightbox img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
+@media (max-width:640px){
+  .ba,.grid2{grid-template-columns:1fr}
+  header.wrap{padding-top:56px;padding-bottom:40px}
+  .intro{flex-direction:column;align-items:flex-start;gap:20px}
+  .avatar{width:132px;height:132px}
+  .stats{grid-template-columns:1fr 1fr}
+  .stat + .stat{border-left:0}
+  .stat:nth-child(even){border-left:1px solid var(--line)}
+  .stat:nth-child(n+3){border-top:1px solid var(--line)}
+  .stat b{font-size:32px}
+  section{padding:32px 0}
+  .card{padding:20px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<nav class="outline" aria-label="Page outline">
+  <a href="#top">Home</a>
+  <a href="#about">About</a>
+  <a href="#process">How I work</a>
+  <a href="#projects">Projects</a>
+  <a href="#agents">AI agents</a>
+  <a href="#engineering">Engineering</a>
+  <a href="#skills">Tools</a>
+  <a href="#experience">Experience</a>
+  <a href="#contact">Contact</a>
+</nav>
+
+<div class="wall" aria-hidden="true"><div class="wall-tilt">
+  <div class="row" data-imgs="bh-apps bh-tasks-home render-room promptforge-1 bh-mail car-1"></div>
+  <div class="row" data-imgs="bh-admin moneyprinter bh-chat promapper-1 render-paravan secusearch-1"></div>
+  <div class="row" data-imgs="bh-tasks-project polymarket-1 render-chair promptforge-2 car-2 promapper-2"></div>
+</div></div>
+
+<header class="wrap" id="top">
+  <div class="intro">
+    <img class="avatar" src="img/photo.jpg" alt="Ibrahim Jaafar" width="168" height="168">
+    <div>
+      <h1>Ibrahim Jaafar</h1>
+      <p class="role">AI Specialist · Automation, agents and internal tools</p>
+    </div>
+  </div>
+  <p class="lead">I turn complex operational problems into reliable AI systems, including workflow automation, multi-agent systems and secure internal platforms, and take them from first prototype to daily production use.</p>
+  <div class="contact">
+    <a class="btn primary" data-mail href="#contact">Email me</a>
+    <a class="btn" href="https://www.linkedin.com/in/ibrahim-jaafar-007270121" target="_blank" rel="noopener">LinkedIn</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>5<small>+ yrs</small></b><span>Engineering &amp; product experience</span></div>
+    <div class="stat"><b>20<small>+</small></b><span>Projects built</span></div>
+    <div class="stat"><b>10<small>+</small></b><span>Clients &amp; organisations served</span></div>
+    <div class="stat"><b>2022</b><span>Building with AI since</span></div>
+  </div>
+</header>
+
+<section id="about"><div class="wrap">
+  <h2>About me</h2>
+  <p class="lead" style="margin-top:16px">I design and build AI solutions, from automations and agents to complete internal platforms, that help teams work faster and more accurately.</p>
+  <p class="lead">I came to software through engineering. Years of designing and manufacturing products taught me to see work as a system: how it flows, where it breaks, and how to fix it at the root. That's how I approach every tool I build.</p>
+  <p class="lead">I've worked with AI since the first tools appeared, researching and testing what they could do and where they fell short, and that curiosity became my profession. I work methodically, with close attention to detail and clear documentation.</p>
+</div></section>
+
+<section id="process"><div class="wrap">
+  <h2>How I work</h2>
+  <div class="steps">
+    <div><b>Discover</b><p>I sit with each person and have them walk me through their workflow: where their time goes, which tasks repeat, and which are hardest.</p></div>
+    <div><b>Analyse</b><p>I map every step in detail and find where the time and errors actually come from, before deciding what to build.</p></div>
+    <div><b>Build</b><p>I design the solution around how people already work, then build it and ship it to production.</p></div>
+    <div><b>Adopt</b><p>I train the team on each tool, document it, and keep improving it from their feedback and support tickets.</p></div>
+  </div>
+</div></section>
+
+<section id="projects" data-tiles><div class="wrap">
+  <h2>Selected projects</h2>
+  <p class="sub">Company platforms, AI content generation, computer vision, data and engineering tools.</p>
+
+  <div class="featured" id="work" data-tiles>
+  <span class="eyebrow">Featured · current role</span>
+  <h3 class="featured-title">Blue House Films: the company platform</h3>
+  <p class="sub">Blue House Films is a film and social media company of about 100 people. I joined in September 2026 as its AI Specialist, to help the team work faster and more accurately with less repetitive work. I started by replacing scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks.</p>
+  <p class="sub">As the main developer on the 3-person R&amp;D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub and automated backups. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers.</p>
+  <div class="tiles"></div>
+
+  <div class="card">
+    <h3>Ecosystem: one platform for the whole company</h3>
+    <div class="ba">
+      <div class="before"><span class="label">Before</span>Every employee had their own tools and their own API keys, with nothing connected. Onboarding a new person was a mess.</div>
+      <div class="after"><span class="label">After</span>One connected platform and one source of truth. Every tool plugs into it as a plugin, and everything can be tracked.</div>
+    </div>
+    <ul>
+      <li>Role-based access control: each employee sees only the data their role allows.</li>
+      <li>Plugin design, so each tool (HR, tasks, chat, mail) can be built and shipped on its own.</li>
+      <li>Self-hosted on an Oracle server with backups to Cloudflare R2.</li>
+      <li>Developer documentation I wrote: architecture guide, plugin guide, runbook and architecture decision records, so other developers can build plugins on their own. User guides are next.</li>
+      <li><b>On-laptop AI:</b> plugins can run AI models on employees' own laptops. Models download into a shared cache and are used only if they match their fingerprint, and the engines that run them are built into the signed desktop app, so a web page can never introduce code.</li>
+      <li><b>Desktop app:</b> signed releases with automatic updates, starts with the computer, keeps running in the tray, and shows unread counts on the taskbar or Dock. Windows and macOS.</li>
+      <li><b>Platform services:</b> an audit log of every permission decision, a durable event system, scheduled jobs and reminders, alerts in the app or by email and Telegram, and recorded acceptance of each version of the terms of use.</li>
+      <li><b>Scale:</b> about 70,000 lines of code, 1,200+ automated tests and 57 architecture decision records. I made 92% of the commits.</li>
+    </ul>
+    <div class="tags"><span>Django</span><span>PostgreSQL</span><span>Django-Q2 jobs</span><span>React + Vite</span><span>Tauri desktop app</span><span>RBAC + audit log</span></div>
+    <div class="shots"><img src="img/bh-apps.webp" alt="Blue House Ecosystem apps screen" loading="lazy"></div>
+  </div>
+
+  <div class="card">
+    <h3>Task Manager</h3>
+    <div class="ba">
+      <div class="before"><span class="label">Before</span>Tasks were handed out verbally, by email or on WhatsApp, so they got forgotten, deadlines were missed and managers had to chase people for updates.</div>
+      <div class="after"><span class="label">After</span>Every task has an owner, a status and a deadline. Managers see progress live instead of chasing people, and changes appear on every device instantly.</div>
+    </div>
+    <ul>
+      <li>Project dashboards with active, pending and completed counts, time estimates and workday totals.</li>
+      <li>A yearly activity heatmap per person or per project, so managers can see who is delivering.</li>
+      <li>Sub-tasks, a timeline view, an archive and an activity log.</li>
+    </ul>
+    <div class="tags"><span>React</span><span>Django</span><span>Live updates</span><span>Role-based access</span><span>Web + desktop</span></div>
+    <div class="shots"><img src="img/bh-tasks-home.webp" alt="Task Manager home dashboard" loading="lazy"><img src="img/bh-tasks-project.webp" alt="Task Manager project view" loading="lazy"></div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Mail</h3>
+      <div class="ba">
+        <div class="before"><span class="label">Before</span>Staff had to log in to Bluehost webmail or set up email on their phones and Outlook, which was hard for non-technical people. Important emails were missed or answered late, and the company had faced phishing attacks with no protection beyond the basics.</div>
+        <div class="after"><span class="label">After</span>Company email inside the platform with just an email and password, and instant notifications. Every message is checked for phishing and malicious content, and suspicious mail is clearly flagged.</div>
+      </div>
+      <ul>
+        <li>Every sender labelled Internal, External or "Company, not verified", so spoofed company addresses stand out.</li>
+        <li>Warns when replies would go somewhere other than the sender, with one-click "Report phishing".</li>
+        <li>Checks sender authentication (SPF, DKIM, DMARC), catches lookalike company domains (such as a "1" for an "l" or Cyrillic letters), flags risky attachments like macro-enabled files, and shows a dangerous link's real address before it opens. All checks run on our own server, with no outside service.</li>
+        <li>Remote images blocked by default, so senders can't track when an email is opened.</li>
+      </ul>
+      <div class="shots"><img src="img/bh-mail.webp" alt="Blue House mail with phishing warning (private details blurred)" loading="lazy"></div>
+    </div>
+    <div class="card">
+      <h3>Chat</h3>
+      <div class="ba">
+        <div class="before"><span class="label">Before</span>Work talk was split between Slack, WhatsApp, email and conversations, depending on the person. Private numbers got shared and announcements were missed.</div>
+        <div class="after"><span class="label">After</span>Everyone now uses one internal chat instead of paid Slack seats. It's trackable, abuse can be reported to HR with proof, and nobody has to share a private number.</div>
+      </div>
+      <ul>
+        <li>Private channels, direct and group messages, threads and bookmarks.</li>
+        <li>Replies, search across all chats, read receipts, mute and block.</li>
+      </ul>
+      <div class="shots"><img src="img/bh-chat.webp" alt="Blue House chat (names and messages blurred)" loading="lazy"></div>
+    </div>
+    <div class="card">
+      <h3>SRT Cleaner</h3>
+      <p class="meta">Co-developed</p>
+      <div class="ba">
+        <div class="before"><span class="label">Before</span>The list of words to censor in subtitles was passed around on WhatsApp and email. Remote staff missed updates and each writer censored differently, so banned words reached published videos, posts got flagged or restricted, and videos had to be re-edited and re-uploaded.</div>
+        <div class="after"><span class="label">After</span>A manager updates the word bank in one place and everyone has it instantly. Censoring follows one standard method, and a 30–90 minute manual editing task now takes seconds. It's in daily use across the company's news platforms.</div>
+      </div>
+      <ul>
+        <li>Cleans subtitles in English, French and Arabic, and never touches the timestamps.</li>
+        <li>Moved from a standalone desktop tool into the platform, with a shared word bank and an activity log.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Admin panel</h3>
+      <p>One control centre for running and securing the platform.</p>
+      <ul>
+        <li>Per-role access control, plus rules for which roles must use two-factor sign-in.</li>
+        <li>Company API keys held centrally and assigned to plugins, so staff never handle keys themselves.</li>
+        <li>System health, monitoring, backups and alerts, including logins and malicious access attempts.</li>
+        <li>"View as role" and audited, read-only "view as user" for safe debugging.</li>
+        <li>Scheduled jobs, platform updates and the support ticket queue.</li>
+      </ul>
+      <div class="shots"><img src="img/bh-admin.webp" alt="Blue House admin panel" loading="lazy"></div>
+    </div>
+    <div class="card">
+      <h3>HR</h3>
+      <p>The HR team's workspace for employee records and workplace reports.</p>
+      <ul>
+        <li>Employee records: job title, contract type and dates, ID details and status. Assigning a role in the editor also sets the person's access.</li>
+        <li>Self-service profiles: each employee updates their own photo, phone, address and emergency contact.</li>
+        <li><b>Cases:</b> when someone reports a chat, HR gets a case. HR can read the reported conversation, talk privately with the reporter, and close the case with a written verdict. The people reported never see the case.</li>
+        <li>A full change history for every record and case, plus automatic clean-up of old records.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Ticket system</h3>
+      <p>Employees report bugs, security issues and feature requests from inside the platform. The developer chats with the person who raised the ticket and marks it resolved, so nothing gets lost in messages.</p>
+    </div>
+    <div class="card">
+      <h3>Device statistics</h3>
+      <p>Collects the hardware specs of employees' computers and shows them on a dashboard, so developers know what hardware they are building for. It guided the decisions when a macOS version of the platform was developed.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Newsroom engine</h3>
+    <p class="meta">Working MVP</p>
+    <p>A news-intelligence engine for the company's newsrooms.</p>
+    <ul>
+      <li>Collects news from RSS feeds, GDELT and outlet scraping, then groups articles about the same event into stories across languages using AI embeddings.</li>
+      <li>Links names to Wikidata, tags topics with AI, and searches by tags, words and meaning.</li>
+      <li>Raises breaking-news alerts and shows verification signals: who confirms a story and where it started.</li>
+      <li>Each outlet has a research profile covering ownership, funding and leaning.</li>
+      <li>About 8,500 lines with 257 automated tests.</li>
+    </ul>
+    <div class="tags"><span>Django</span><span>PostgreSQL + pgvector</span><span>React</span><span>AI embeddings</span></div>
+  </div>
+  <div class="card">
+    <h3>Insert Suggester</h3>
+    <p class="meta">In progress</p>
+    <p>An AI tool for script writers, designed to read each block of a video script, work out what it's really about, and propose visual inserts (videos, images, articles, X posts) through live search, guided by a bank of past scripts.</p>
+    <p>An earlier version built by an intern failed, so I reviewed its whole codebase, mapped its logic, and am now redesigning it from scratch.</p>
+  </div>
+  </div>
+
+  <div class="tiles"></div>
+
+  <div class="card">
+    <h3>MoneyPrinterTurbo Extended: AI short-video generator</h3>
+    <p class="meta">Python · FastAPI · React · CLIP / SigLIP-2 · Whisper · FFmpeg</p>
+    <p>Freelance project for a client who needed more control than the open-source MoneyPrinterTurbo gives. That tool writes a script, narrates it and assembles stock footage into a video. I replaced its interface with a React app and added AI matching between clips and script, so the footage fits what is being said. About 5,300 new lines of code, and the client was satisfied with the result.</p>
+    <ul>
+      <li><b>Footage that matches meaning:</b> the script is split into sentences, each candidate clip's frames are scored against the sentence with CLIP/SigLIP, and clips are assigned across the whole video at once (Hungarian algorithm) so the best matches aren't used up early.</li>
+      <li><b>AI script helpers:</b> writes an attention-grabbing opening hook and turns each part of the script into precise footage search terms.</li>
+      <li><b>More footage sources:</b> added YouTube (with browser-session sign-in), Wikimedia and Coverr alongside Pexels and Pixabay; every clip is trimmed and tagged with its source.</li>
+      <li><b>Clip-review editor:</b> before rendering, the operator can swap a clip, search again with their own keywords, upload their own footage, stretch a clip across several sentences, trim it, see which clips are already used, then approve.</li>
+      <li><b>Speed:</b> frame analyses are cached and computed in parallel in the background, and low-quality frames are scored down.</li>
+      <li><b>Voice and subtitles:</b> Chatterbox voice cloning on the GPU and ElevenLabs, with word-level subtitle timing from faster-whisper.</li>
+      <li>A gallery of past clips, and automated tests for the new parts.</li>
+    </ul>
+    <div class="shots"><img src="img/moneyprinter.webp" alt="MoneyPrinterTurbo Extended script editor" loading="lazy"></div>
+  </div>
+
+  <div class="card">
+    <h3>PromptForge: multi-provider AI image platform</h3>
+    <p class="meta">Next.js · TypeScript · SQLite · AES-256-GCM</p>
+    <p>Built for a social media startup that needed to produce post images at volume. Write one structured prompt and generate images from many AI providers at once (OpenAI, Gemini, Stability, Replicate, fal.ai, Ideogram, Cloudflare, Mistral and others). Each request is adapted to what the chosen model supports.</p>
+    <ul>
+      <li><b>Per-model adaptation:</b> each request is adjusted to what the chosen model supports (sizes and aspect ratios, negative prompts, reference-image limits, reasoning settings), so one prompt works everywhere.</li>
+      <li><b>Built for team volume:</b> templates with variables, brand kits, batch generation, and templates that can be shared and imported between users.</li>
+      <li><b>Provider monitoring:</b> each provider's remaining balance, rate limits and usage at a glance.</li>
+      <li><b>Reliability:</b> automatic retries, timeouts and limits on parallel requests; a failure at one provider never stops the others.</li>
+      <li>Annotated reference images, full generation history, and API keys encrypted at rest (AES-256-GCM). About 22,000 lines of TypeScript.</li>
+    </ul>
+    <div class="shots"><img src="img/promptforge-1.webp" alt="PromptForge prompt builder" loading="lazy"><img src="img/promptforge-2.webp" alt="PromptForge generation history" loading="lazy"></div>
+  </div>
+
+  <div class="card">
+    <h3>PhoneCam: billboard detection for advertising research</h3>
+    <p class="meta">Python · PySide6 · YOLO11/12/v8 · TensorRT · FFmpeg/NVDEC · OpenCV</p>
+    <p>Freelance project for a university professor researching how advertising differs by location. A Windows desktop app that scans recorded video, detects billboards, and exports a folder of billboard images ready for a second AI tool that analyses their content.</p>
+    <ul>
+      <li>YOLO11, YOLO12 and YOLOv8 presets, including rotated boxes for billboards seen at an angle, with models downloaded on demand.</li>
+      <li>Exports straightened, full-resolution crops of every detection. Removing duplicates is left to the analysis step, by design.</li>
+      <li>GPU hardware video decoding and TensorRT engines built from inside the app, for fast processing.</li>
+      <li>Speed, CPU, GPU and memory metrics for each stage, used to decide what to optimise next.</li>
+    </ul>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Polymarket research and strategy simulator</h3>
+      <p class="meta">Python · WebSockets · Streamlit · Plotly · Polymarket and Binance APIs</p>
+      <p>Freelance project for a client who wanted market insights and a safe way to test trading strategies. A research toolkit and a strategy simulator that runs on live market data. It was used for simulation and research only, not live trading.</p>
+      <ul>
+        <li><b>Strategy engine:</b> a 10-state decision engine with built-in risk controls: limits on open positions, total exposure and new entries per update, no new entries near expiry, trend confirmation before entering, liquidity checks before buying, and profit targets that adjust as expiry approaches, with hedging to lock in profit when a trade turns. The full logic is documented in a written specification.</li>
+        <li><b>Market recorder:</b> records Bitcoin 15-minute up/down markets, with an interactive player to replay them.</li>
+        <li><b>Trade-history collector:</b> pulls large volumes of past trades from the API, page by page.</li>
+        <li><b>Dashboards:</b> trader performance analysis (Streamlit and Plotly), a live view of every open position, and a desktop browser for simulation logs.</li>
+      </ul>
+      <div class="shots"><img src="img/polymarket-2.webp" alt="Polymarket strategy analyzer dashboard" loading="lazy"><img src="img/polymarket-1.webp" alt="Live Polymarket price plot with trades" loading="lazy"></div>
+    </div>
+    <div class="card">
+      <h3>ProMapper</h3>
+      <p class="meta">React · Electron · SQLite</p>
+      <p>Built for a business advisor, who still uses it. Visual project planning: tasks as connected nodes with dependencies, statuses, costs in several currencies, and templates.</p>
+      <ul>
+        <li>Time, priority, notes and resource fields on every task, with progress tracking per project.</li>
+        <li>Cost and budget tracking in several currencies, converted with live exchange rates.</li>
+        <li>Reusable project templates and export to several formats.</li>
+      </ul>
+      <div class="shots"><img src="img/promapper-1.webp" alt="ProMapper canvas" loading="lazy"><img src="img/promapper-2.webp" alt="ProMapper cost analysis" loading="lazy"></div>
+    </div>
+    <div class="card">
+      <h3>Multimodal PDF RAG</h3>
+      <p class="meta">LangChain · ChromaDB · OpenAI · Groq · Mistral</p>
+      <p>A personal project to help university students chat with their PDF documents, including text, tables and images. I compared models and OCR tools, and concluded that reliable answers from complex PDFs need better layout parsing and citation checks.</p>
+      <ul>
+        <li>Extracted text, tables and images from PDFs into a ChromaDB vector store (Unstructured, LangChain).</li>
+        <li>Compared OpenAI, Groq (Llama) and Mistral models for answers and embeddings.</li>
+        <li>Summarised each table and image with an AI model so they could be searched alongside the text.</li>
+        <li>Tested Azure Document Intelligence and GMFT table detection for reading complex page layouts.</li>
+        <li>Built a small chat interface for asking questions about the documents (Flet).</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>SecuSearch</h3>
+      <p class="meta">Electron · SearXNG · Tor</p>
+      <p>Freelance project. A privacy-focused desktop search app that combines results from many search engines and can route traffic through Tor.</p>
+      <ul>
+        <li>Results from Google, Bing, Yahoo and other engines in one place, without the engines tracking the user directly.</li>
+        <li>Shipped as a one-click Windows installer with embedded Python, so non-technical users can set it up themselves.</li>
+      </ul>
+      <div class="shots"><img src="img/secusearch-1.webp" alt="SecuSearch home" loading="lazy"><img src="img/secusearch-2.webp" alt="SecuSearch results" loading="lazy"></div>
+    </div>
+    <div class="card">
+      <h3>CurveMill: CNC file optimiser</h3>
+      <p class="meta">Python · PySide6 · C# SolidWorks add-in</p>
+      <p>Internal tool for Ghandour Solutions, built to fix a bottleneck in the company's CNC workflow. It cleans and repairs DXF cutting files and previews how the cutting tool will run. On real files it cut sketch elements from 3,383 to 540, and a 7,014-line pattern down to 274.</p>
+      <ul>
+        <li>Finds sketch faults (open profiles, duplicate lines, shared corner points) and shows each one as a clickable warning that zooms to it.</li>
+        <li>Keeps curves as true splines through import, editing and export, instead of breaking them into small lines.</li>
+        <li>Simulates the endmill cutting along the centre, inside or outside of a path, and repairs small gaps within a set tolerance.</li>
+        <li>A SolidWorks add-in with its own toolbar, plus a pass that rejoins broken curves into whole ones.</li>
+        <li>SolidWorks-style dimensions to place a pattern exactly on the board, a reusable pattern library, and project files to pause and resume a job.</li>
+        <li>About 16,000 lines of Python, covered by 225 automated tests.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Flight incident replay for a journalist</h3>
+      <p class="meta">JavaScript · Three.js · uPlot · flight-tracking data</p>
+      <p>A journalist investigating the diversion of flydubai flight FZ1073 needed to see what happened. I merged data from two flight-tracking services into an interactive replay with a 3D view, a map, and altitude, speed and climb-rate charts.</p>
+      <ul>
+        <li>Play, pause and scrub through the flight, with every view kept in sync.</li>
+        <li>A physics simulation of the cabin: it estimates the g-forces from the recorded data and shows how unbelted passengers would have moved between seats and overhead bins, with its assumptions stated on screen.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Arabic ID number reader (prototype)</h3>
+      <p class="meta">Ghandour Solutions · Python · object detection · data augmentation</p>
+      <p>A test project for an ID-scanning device: detecting Lebanese ID cards and reading their Arabic numerals. I built the dataset, the augmentation and the training notebooks. It was shelved because reading Arabic numerals reliably needed stronger models than were available to us then.</p>
+    </div>
+    <div class="card">
+      <h3>Truck detection and gate control</h3>
+      <p class="meta">Client project at Ghandour Solutions · Python · OpenCV · YOLOv5 · Arduino</p>
+      <p>A client wanted their gate to open automatically for trucks. The system detects and tracks trucks from a live camera and opens the gate through an Arduino relay.</p>
+    </div>
+  </div>
+</div></section>
+
+<section id="agents" data-tiles><div class="wrap">
+  <h2>AI agents and automation</h2>
+  <p class="sub">I've been building with AI since ChatGPT first came out in late 2022. Today I use Claude Code and other agentic tools every day, and I build my own agents for jobs that would otherwise take hours by hand.</p>
+
+  <div class="card">
+    <h3>Hermes multi-agent system on Telegram</h3>
+    <p class="meta">Hermes Agent · Telegram · web scraping · Android emulator automation</p>
+    <p>Four bots, each with its own job. An orchestrator hands out the work and passes requests between them. I use them almost every day, for myself and for friends.</p>
+    <ul>
+      <li><b>Car specialist:</b> takes a licence plate, scrapes the car's details, then uses the VIN to check recalls and cross-check the data on other sites. It then starts an Android emulator, turns on a VPN, opens a specific app and fills in the data to pull the car's history, with no manual steps.</li>
+      <li><b>Trading analyst:</b> reads the news, pulls live MetaTrader 5 data, backtests strategies, and shows how the news moves the market on a live dashboard.</li>
+      <li><b>Coding bot:</b> writes code in my own style and conventions.</li>
+      <li><b>Orchestrator:</b> delegates tasks and acts as the middle man. For example, when the trading bot needs new code, it routes the request to the coding bot.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Furniture CAD-to-render pipeline</h3>
+    <p class="meta">Claude Code · Blender MCP · Gemini image generation · SolidWorks</p>
+    <p>Product photos for a furniture line without a photo shoot. Products designed in SolidWorks are placed into photoreal scenes by Gemini image generation. Because image models get the scale of objects wrong, Claude also builds each scene in Blender through MCP, using the real furniture dimensions.</p>
+    <ul>
+      <li>33 reusable scene scripts: importing parts, building rooms, applying materials, lighting and final polish.</li>
+      <li>A written standards library (walls, doors, windows, lighting and camera, furniture clearances) that Claude reads before building, so rooms come out at real-world sizes.</li>
+      <li>Automated checks that measure furniture clearances and catch overlapping objects before rendering.</li>
+      <li>Calibrated scanned fabric materials and Poly Haven textures and lighting for photoreal results.</li>
+    </ul>
+    <div class="shots"><img src="img/render-paravan.webp" alt="Rendered room divider in a living room" loading="lazy"><img src="img/render-room.webp" alt="Rendered reading corner with room divider and armchair" loading="lazy"><img src="img/render-chair.webp" alt="Close-up render of an armchair" loading="lazy"></div>
+  </div>
+
+  <div class="card">
+    <h3>Mosaic: order-to-production system</h3>
+    <p class="meta">My own furniture business · in development · Next.js · Supabase · Cloudflare</p>
+    <p>An online store with an admin panel. When an order comes in, the system shows exactly which manufacturing files to cut. A strict code covers every part of every product and its variants, so each order maps straight to production.</p>
+    <ul>
+      <li>21 coded designs so far. Each one links its SolidWorks part files and sizes, and each variant records which parts it is cut from.</li>
+      <li>Customers pick the wood or colour for each material, and the price is calculated from real costs: materials, edge banding, hardware, services and markup.</li>
+      <li>Admin sections for materials, suppliers, hardware, delivery, categories and the blog, so the whole business runs from one place.</li>
+      <li>Storefront with shop and product pages, room collections, cart, customer accounts with delivery addresses and order history, and a blog.</li>
+    </ul>
+  </div>
+</div></section>
+
+<section id="engineering" data-tiles><div class="wrap">
+  <h2>Engineering and 3D</h2>
+  <p class="sub">My background is in mechanical design and manufacturing, and I still build software for it.</p>
+
+  <div class="card">
+    <h3>Optiforge: AI-assisted CAD/CAE optimisation platform</h3>
+    <p class="meta">C++ · CMake · Qt · VTK · OpenCascade · product requirements and architecture · freelance, for a researcher · halted by the client for lack of funding</p>
+    <p>A platform to help engineers improve mechanical designs using simulation, manufacturing constraints, material data, surrogate models and AI-assisted decisions. I wrote the full product requirements document, with stable requirement IDs, version scopes and verification rules, plus architecture decision records and a matrix linking every requirement to its tests. I then set up the codebase: twelve module skeletons with boundaries enforced at build time, four app shells, and early tests proving the core engines (Gmsh meshing, the CalculiX solver, OpenCascade geometry) worked together. The client halted the project at that point for lack of funding.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>Interactive 3D vehicle viewer</h3>
+      <p class="meta">React · Three.js · React Three Fiber · Blender</p>
+      <p>Freelance project for a client building an electric-vehicle app, who wanted to show each user a 3D model of their own car inside the app. It includes the full asset workflow: cleaning and compressing the models in Blender, exporting them for the web, and showing them in the browser. The finished code was handed over to the client.</p>
+      <ul>
+        <li>Works with any standard 3D car model (GLB/GLTF); the demo uses a BYD Dolphin.</li>
+        <li>Shows loading progress while the model downloads.</li>
+        <li>Orbit controls so the user can spin and zoom around the car.</li>
+      </ul>
+      <div class="shots"><img src="img/car-1.webp" alt="3D vehicle viewer showing an electric car" loading="lazy"><img src="img/car-2.webp" alt="3D vehicle viewer, rear view" loading="lazy"></div>
+    </div>
+    <div class="card">
+      <h3>Electronics and home automation</h3>
+      <p class="meta">Arduino · Raspberry Pi · Sonoff · sensors</p>
+      <p>Home automation for energy metering, automated curtains, climate control and safety, plus Arduino and Raspberry Pi prototypes that connect software to real hardware.</p>
+    </div>
+  </div>
+</div></section>
+
+<section id="skills"><div class="wrap">
+  <h2>Tools I work with</h2>
+  <div class="skills" style="margin-top:24px">
+    <div><b>AI and agents</b><p>Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, OpenAI / Gemini / Groq / Mistral APIs, LangChain, RAG, embeddings</p></div>
+    <div><b>Automation and integration</b><p>REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n (learning)</p></div>
+    <div><b>Apps and backend</b><p>Python, TypeScript, React, Next.js, FastAPI, Django, Supabase, Postgres, SQLite, Electron, Tauri, Streamlit and Plotly dashboards</p></div>
+    <div><b>Infrastructure</b><p>Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub, role-based access control</p></div>
+    <div><b>Vision and media</b><p>YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, FFmpeg, ElevenLabs</p></div>
+    <div><b>Engineering</b><p>SolidWorks (certified), Blender, CNC and 3D printing, Arduino, Raspberry Pi</p></div>
+  </div>
+</div></section>
+
+<section id="experience"><div class="wrap">
+  <h2>Experience</h2>
+  <ol class="timeline">
+  <li class="now">
+    <span class="when">Sep 2026 – present</span>
+    <h3>AI Specialist</h3>
+    <p class="org">Blue House Films</p>
+    <p>A film and social media company of about 100 people. I was hired to help the team work faster and more accurately with less repetitive work. I started by replacing scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks.</p>
+    <p>As the main developer on the 3-person R&amp;D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub and automated backups. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers.</p>
+  </li>
+  <li class="now">
+    <span class="when">2023 – present</span>
+    <h3>Freelance Software Developer</h3>
+    <p class="org">Independent</p>
+    <p>Desktop apps, AI and computer vision systems, data pipelines and automation tools for clients.</p>
+  </li>
+  <li>
+    <span class="when">2021 – 2026</span>
+    <h3>Product Designer &amp; Machinist</h3>
+    <p class="org">Ghandour Solutions</p>
+    <p>A company building solar battery systems, industrial machines and custom CNC-made parts. Product design, CAD modelling and CNC machining. I ran, maintained and repaired the FDM 3D printers and 3-axis CNC machines, and did electronics prototyping and automation with Arduino and Raspberry Pi. I was also asked to streamline the company's workflow: I built CurveMill to fix its CNC file bottleneck. I also set up a Notion hub for the business, covering design, manufacturing, sales, finance, inventory, suppliers and staff training. After comparing ERP, PDM and PLM systems, I installed SolidWorks PDM so the engineers always work on the latest approved design files.</p>
+  </li>
+  </ol>
+  <p class="meta"><b>Certifications:</b> Anthropic: Claude Code 101, Introduction to Agent Skills, Introduction to Subagents · Certified SOLIDWORKS Design Professional · Certified SOLIDWORKS Additive Manufacturing Associate · PMI: Fundamentals of Predictive Project Management · LinkedIn Learning: Engineering Drawings for Manufacturing, SOLIDWORKS: Advanced Engineering Drawings · HP LIFE: Customer Relationship Management</p>
+  <p class="meta"><b>Languages:</b> Arabic (native), English (professional), Persian (good)</p>
+</div></section>
+
+<footer id="contact"><div class="wrap">
+  <p><b style="color:var(--text)">Let's talk.</b> <a data-mail data-show href="#contact">Email (needs JavaScript)</a> · <a href="https://www.linkedin.com/in/ibrahim-jaafar-007270121" target="_blank" rel="noopener">LinkedIn</a></p>
+  <p>Based in Lebanon (Beirut time) · open to remote roles · available to start immediately</p>
+</div></footer>
+
+<dialog class="detail" aria-label="Project details">
+  <button class="close" aria-label="Close">×</button>
+  <div class="detail-body"></div>
+</dialog>
+
+<script>
+// Turn each project card into a compact box; the full card opens in a dialog.
+// Without JS the full cards simply stay on the page.
+const dlg = document.querySelector('dialog.detail');
+const dlgBody = dlg.querySelector('.detail-body');
+const text = el => el ? el.textContent.replace(/^\s*(Before|After)/, '').trim() : '';
+document.querySelectorAll('[data-tiles]').forEach(sec => {
+  // only this container's own items, not those of a block nested inside it
+  const own = sel => [...sec.querySelectorAll(sel)].filter(el => el.closest('[data-tiles]') === sec);
+  let grid = own('.tiles')[0];
+  if (!grid) {
+    grid = document.createElement('div');
+    grid.className = 'tiles';
+    (own('.sub')[0] || sec.querySelector('h2')).after(grid);
+  }
+  own('.card').forEach(card => {
+    const tile = document.createElement('button');
+    tile.className = 'tile';
+    const img = card.querySelector('img');
+    const summary = text(card.querySelector('.after')) || text(card.querySelector('p:not(.meta)')) || text(card.querySelector('li'));
+    tile.innerHTML = (img ? `<img src="${img.getAttribute('src')}" alt="" loading="lazy">` : '') +
+      `<h3></h3><p class="meta"></p><p></p><span class="more">View details →</span>`;
+    tile.querySelector('h3').textContent = text(card.querySelector('h3'));
+    const meta = text(card.querySelector('.meta'));
+    if (meta) tile.querySelector('.meta').textContent = meta; else tile.querySelector('.meta').remove();
+    tile.querySelector('p:not(.meta)').textContent = summary;
+    tile.addEventListener('click', () => {
+      const copy = card.cloneNode(true);
+      copy.hidden = false;
+      dlgBody.replaceChildren(copy);
+      dlg.showModal();
+      dlg.scrollTop = 0;
+    });
+    grid.append(tile);
+    card.hidden = true;
+  });
+  own('.grid2').forEach(g => g.hidden = true);
+});
+dlg.querySelector('.close').addEventListener('click', () => dlg.close());
+
+// click any screenshot to see it full screen; click or Esc closes it
+const lb = document.createElement('dialog');
+lb.className = 'lightbox';
+lb.innerHTML = '<img alt="">';
+document.body.append(lb);
+document.addEventListener('click', e => {
+  const img = e.target.closest('.shots img');
+  if (!img) return;
+  lb.querySelector('img').src = img.src;
+  lb.querySelector('img').alt = img.alt;
+  lb.showModal();
+});
+lb.addEventListener('click', () => lb.close());
+dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+
+// highlight the outline link for the section in view
+const links = [...document.querySelectorAll('.outline a')];
+const mark = id => links.forEach(a => a.classList.toggle('on', a.hash === '#' + id));
+// the footer is too short to reach mid-screen, so the page bottom always means Contact
+const atBottom = () => innerHeight + scrollY >= document.documentElement.scrollHeight - 4;
+const spy = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting && !atBottom()) mark(e.target.id);
+}), { rootMargin: '-45% 0px -50% 0px' });
+links.forEach(a => { const t = document.querySelector(a.hash); if (t) spy.observe(t); });
+addEventListener('scroll', () => { if (atBottom()) mark('contact'); }, { passive: true });
+
+if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObserver' in window) {
+  document.documentElement.classList.add('js');
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    el.classList.add('in'); io.unobserve(el);
+    // drop the reveal classes afterwards so the cards' own hover effects work again
+    setTimeout(() => el.classList.remove('reveal', 'in'), 800);
+  }), { threshold: 0.12 });
+  document.querySelectorAll('header > *, section h2, section .sub, section .lead, .tile, .timeline li, .steps > div, .skills > div')
+    .forEach(el => { el.classList.add('reveal'); io.observe(el); });
+}
+// email assembled at runtime, reversed so scrapers reading the source find nothing
+const mail = ['moc.liamg', '7991.nonabel.miharbi'].map(x => [...x].reverse().join('')).reverse().join('@');
+document.querySelectorAll('[data-mail]').forEach(a => { a.href = 'mailto:' + mail; if (a.hasAttribute('data-show')) a.textContent = mail; });
+// wall: each row holds its images twice so the drift loops seamlessly
+document.querySelectorAll('.wall .row').forEach(r => {
+  const imgs = r.dataset.imgs.split(' ').map(n => `<img src="img/${n}.webp" alt="" decoding="async">`).join('');
+  r.innerHTML = imgs + imgs;
+});
+</script>
+</body>
+</html>
