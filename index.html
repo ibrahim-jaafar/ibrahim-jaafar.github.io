@@ -75,12 +75,6 @@ h1{font-size:clamp(38px,6.5vw,64px);line-height:1.05;margin:0 0 12px;letter-spac
 .btn{display:inline-block;padding:11px 20px;border-radius:12px;border:1px solid var(--line);font-weight:600;color:var(--text);background:var(--glass);transition:.2s}
 .btn:hover{color:var(--text);background:var(--glass-hi);transform:translateY(-1px)}
 .btn.primary{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 30px rgba(92,120,255,.35)}
-.ask{position:relative}
-.ask summary{list-style:none;cursor:pointer}
-.ask summary::-webkit-details-marker{display:none}
-.ask-menu{position:absolute;top:calc(100% + 8px);left:0;z-index:5;min-width:230px;display:grid;padding:6px;border:1px solid var(--line);border-radius:12px;background:rgba(10,12,22,.96);backdrop-filter:blur(12px)}
-.ask-menu a{padding:10px 12px;border-radius:8px;color:var(--text)}
-.ask-menu a:hover{background:var(--glass-hi)}
 /* one panel, four figures split by hairlines */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:44px;border:1px solid var(--line);border-radius:18px;background:var(--glass);backdrop-filter:blur(10px);overflow:hidden}
 .stat{padding:24px 26px;position:relative}
@@ -171,6 +165,26 @@ li::marker{color:var(--a2)}
 dialog.detail{width:min(880px,calc(100% - 32px));max-height:88vh;padding:0;border:1px solid var(--line);border-radius:22px;background:#0c0f1d;color:var(--text);box-shadow:0 30px 80px rgba(0,0,0,.6)}
 dialog.detail::backdrop{background:rgba(3,4,10,.72);backdrop-filter:blur(6px)}
 body:has(dialog[open]){overflow:hidden}
+.pop{width:min(560px,calc(100% - 32px))}
+#askbox{width:min(920px,calc(100% - 32px))}
+.pop-body{padding:30px}
+.pop h3{margin:0 0 8px;font-size:26px;line-height:1.25}
+.copyrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:18px 0 12px}
+.copyrow code{flex:1;min-width:0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--glass);font-size:15px;overflow-wrap:anywhere}
+.small{font-size:14px;color:var(--muted)}
+.ask-grid{display:grid;grid-template-columns:1fr 1.6fr;gap:28px}
+.ask-dl{padding-right:28px;border-right:1px solid var(--line)}
+.ai-pick{border:0;padding:0;margin:14px 0;display:flex;flex-wrap:wrap;gap:8px}
+.ai-pick label{position:relative;padding:8px 14px;border:1px solid var(--line);border-radius:10px;cursor:pointer;font-size:14px}
+.ai-pick input{position:absolute;opacity:0;pointer-events:none}
+.ai-pick label:has(input:checked){background:var(--grad);border-color:transparent;color:#fff}
+.ai-pick label:has(input:focus-visible){outline:2px solid var(--a2)}
+.ask-form label.jd{display:block;font-weight:600;font-size:14px}
+.ask-form textarea{width:100%;box-sizing:border-box;margin-top:6px;padding:12px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.03);color:var(--text);font:inherit;font-size:14px;font-weight:400;resize:vertical}
+.prompt{white-space:pre-wrap;max-height:160px;overflow:auto;padding:12px;border:1px dashed var(--line);border-radius:12px;font:inherit;font-size:13px;color:var(--muted);margin:6px 0 14px}
+.hint{font-size:12.5px;color:var(--muted);margin:6px 0}
+button.btn{font:inherit;font-weight:600;cursor:pointer}
+@media (max-width:700px){.ask-grid{grid-template-columns:1fr}.ask-dl{padding:0 0 22px;border-right:0;border-bottom:1px solid var(--line)}.pop-body{padding:24px 20px}}
 .detail .card{border:0;background:none;backdrop-filter:none;margin:0;padding:32px}
 .detail .card:hover{transform:none;box-shadow:none}
 .detail h3{font-size:26px;padding-right:48px}
@@ -281,16 +295,9 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   </div>
   <p class="lead">I turn complex operational problems into reliable AI systems, including workflow automation, multi-agent systems and secure internal platforms, and take them from first prototype to daily production use.</p>
   <div class="contact">
-    <a class="btn primary" data-mail href="#contact">Email me</a>
+    <a class="btn primary" id="mailbtn" href="#contact">Email me</a>
     <a class="btn" href="https://www.linkedin.com/in/ibrahim-jaafar-007270121" target="_blank" rel="noopener">LinkedIn</a>
-    <details class="ask">
-      <summary class="btn">Am I a fit? Ask your AI</summary>
-      <div class="ask-menu">
-        <a href="https://chatgpt.com/?q=Read%20https%3A//ibrahim-jaafar.github.io/profile.md%20and%20tell%20me%20how%20well%20Ibrahim%20Jaafar%20fits%20this%20role.%20Be%20specific%20about%20his%20strengths%20and%20any%20gaps.%20Job%20description%3A%20%5Bpaste%20it%20here%5D" target="_blank" rel="noopener">Ask ChatGPT</a>
-        <a href="https://claude.ai/new?q=Read%20https%3A//ibrahim-jaafar.github.io/profile.md%20and%20tell%20me%20how%20well%20Ibrahim%20Jaafar%20fits%20this%20role.%20Be%20specific%20about%20his%20strengths%20and%20any%20gaps.%20Job%20description%3A%20%5Bpaste%20it%20here%5D" target="_blank" rel="noopener">Ask Claude</a>
-        <a href="profile.md" download="Ibrahim Jaafar - AI Specialist - ibrahim-jaafar.github.io.md">Download profile (.md)</a>
-      </div>
-    </details>
+    <a class="btn" id="askbtn" href="profile.md">Am I a fit? Ask your AI</a>
   </div>
   <div class="stats">
     <div class="stat"><b>5<small>+ yrs</small></b><span>Engineering &amp; product experience</span></div>
@@ -710,6 +717,44 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   <div class="detail-body"></div>
 </dialog>
 
+<dialog class="detail pop" id="mailbox" aria-label="Email">
+  <button class="close" aria-label="Close">×</button>
+  <div class="pop-body">
+    <h3>Email me</h3>
+    <p class="small">Copy my address and use any email app you like.</p>
+    <div class="copyrow"><code id="mailaddr"></code><button class="btn primary" type="button" id="mailcopy">Copy</button></div>
+    <a class="small" id="mailopen" href="#contact">Or open it in your email app</a>
+  </div>
+</dialog>
+
+<dialog class="detail pop" id="askbox" aria-label="Ask your AI">
+  <button class="close" aria-label="Close">×</button>
+  <div class="pop-body ask-grid">
+    <div class="ask-dl">
+      <h3>Download my profile</h3>
+      <p class="small">My full profile in one file. Give it to any AI tool, or keep it with your candidates.</p>
+      <a class="btn" href="profile.md" download="Ibrahim Jaafar - AI Specialist - ibrahim-jaafar.github.io.md">Download profile (.md)</a>
+    </div>
+    <form class="ask-form">
+      <h3>Ask your AI</h3>
+      <fieldset class="ai-pick">
+        <legend class="small">Choose your AI</legend>
+        <label><input type="radio" name="ai" value="chatgpt" checked>ChatGPT</label>
+        <label><input type="radio" name="ai" value="claude">Claude</label>
+        <label><input type="radio" name="ai" value="other">Other AI (copy the question)</label>
+      </fieldset>
+      <label class="jd">Job description
+        <textarea name="jd" rows="5" placeholder="Paste the job description or a link to it"></textarea>
+      </label>
+      <p class="hint">Pasting the text works best: some job sites need a login, so an AI may not be able to open the link.</p>
+      <p class="small" style="margin:14px 0 0">The question your AI will get:</p>
+      <pre class="prompt"></pre>
+      <button class="btn primary" type="submit">Ask ChatGPT</button>
+      <p class="hint">Nothing you type is sent to me or stored here. It goes only to the AI you choose.</p>
+    </form>
+  </div>
+</dialog>
+
 <a class="totop" href="#top" aria-label="Back to top">&uarr;</a>
 <script>
 // Turn each project card into a compact box; the full card opens in a dialog.
@@ -775,8 +820,6 @@ const spy = new IntersectionObserver(es => es.forEach(e => {
   if (e.isIntersecting && !atBottom()) mark(e.target.id);
 }), { rootMargin: '-45% 0px -50% 0px' });
 links.forEach(a => { const t = document.querySelector(a.hash); if (t) spy.observe(t); });
-const ask = document.querySelector('.ask');
-document.addEventListener('click', e => { if (!ask.contains(e.target)) ask.open = false; });
 const totop = document.querySelector('.totop');
 addEventListener('scroll', () => { if (atBottom()) mark('contact'); totop.classList.toggle('show', scrollY > 400); }, { passive: true });
 
@@ -795,6 +838,46 @@ if (!matchMedia('(prefers-reduced-motion: reduce)').matches && 'IntersectionObse
 // email assembled at runtime, reversed so scrapers reading the source find nothing
 const mail = ['moc.liamg', '7991.nonabel.miharbi'].map(x => [...x].reverse().join('')).reverse().join('@');
 document.querySelectorAll('[data-mail]').forEach(a => { a.href = 'mailto:' + mail; if (a.hasAttribute('data-show')) a.textContent = mail; });
+
+// pop-ups: Email me and Ask your AI
+document.querySelectorAll('dialog.pop').forEach(d => {
+  d.querySelector('.close').addEventListener('click', () => d.close());
+  d.addEventListener('click', e => { if (e.target === d) d.close(); });
+});
+const mailbox = document.getElementById('mailbox');
+document.getElementById('mailbtn').addEventListener('click', e => {
+  e.preventDefault();
+  document.getElementById('mailaddr').textContent = mail;
+  document.getElementById('mailopen').href = 'mailto:' + mail;
+  mailbox.showModal();
+});
+const copied = (btn, label) => { btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = label, 1800); };
+document.getElementById('mailcopy').addEventListener('click', e => navigator.clipboard.writeText(mail).then(() => copied(e.target, 'Copy')));
+
+const askbox = document.getElementById('askbox');
+const form = askbox.querySelector('form');
+const PROFILE = 'https://ibrahim-jaafar.github.io/profile.md';
+const AIS = { chatgpt: ['ChatGPT', 'https://chatgpt.com/?q='], claude: ['Claude', 'https://claude.ai/new?q='], other: ['', ''] };
+const question = () => {
+  const jd = form.jd.value.trim();
+  return jd
+    ? `Read ${PROFILE} and tell me how well Ibrahim Jaafar fits this role. Be specific about his strengths and any gaps.
+
+Job description:
+${jd}`
+    : `Read ${PROFILE}, then ask me to paste the job description. Once I do, tell me how well Ibrahim Jaafar fits the role, being specific about his strengths and any gaps.`;
+};
+const submit = form.querySelector('[type=submit]');
+const label = () => { const [name] = AIS[form.ai.value]; return name ? 'Ask ' + name : 'Copy the question'; };
+const refresh = () => { askbox.querySelector('.prompt').textContent = question(); submit.textContent = label(); };
+form.addEventListener('input', refresh);
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const url = AIS[form.ai.value][1];
+  if (url) open(url + encodeURIComponent(question()), '_blank', 'noopener');
+  else navigator.clipboard.writeText(question()).then(() => copied(submit, label()));
+});
+document.getElementById('askbtn').addEventListener('click', e => { e.preventDefault(); refresh(); askbox.showModal(); });
 // wall: each row holds its images twice so the drift loops seamlessly
 document.querySelectorAll('.wall .row').forEach(r => {
   const imgs = r.dataset.imgs.split(' ').map(n => `<img src="img/${n}.webp" alt="" decoding="async">`).join('');
