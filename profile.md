@@ -11,6 +11,14 @@ I turn complex operational problems into reliable AI systems, including workflow
 - 5+ years in engineering and manufacturing at Ghandour Solutions before moving into AI.
 - Building with AI since ChatGPT's first release in late 2022.
 
+## How I work
+
+1. **Discover:** I sit with each person and have them walk me through their workflow: where their time goes, which tasks repeat, and which are hardest.
+2. **Analyse and research:** I map every step in detail, find where the time and errors actually come from, and research the best available solutions for each problem before deciding what to build.
+3. **Plan:** I plan every step, set the KPIs and limits, compare cost options, and wait for approval before building.
+4. **Build:** I design the solution around how people already work, then build it and ship it to production.
+5. **Adopt:** I train the team on each tool, document it, and keep improving it from their feedback and support tickets.
+
 ## Current role: AI Specialist, Blue House Films (September 2026 – present, remote)
 
 Blue House Films is a film and social media company of about 100 people. I was hired to help the team work faster and more accurately with less repetitive work. I replaced scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks.
@@ -283,7 +291,7 @@ Home automation for energy metering, automated curtains, climate control and saf
 - **Vision and media:** YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, FFmpeg, ElevenLabs
 - **Engineering:** SolidWorks (certified), Blender, CNC and 3D printing, Arduino, Raspberry Pi
 - **Business systems:** Notion (built a full business hub for Ghandour Solutions), SolidWorks PDM (selected and installed after comparing ERP, PDM and PLM systems)
-- **How I work:** workflow discovery with each user, product requirements and architecture decision records, automated testing, code review, user training and AI workshops
+- **How I work:** workflow discovery with each user, researching the best solution for each problem, planning with KPIs, limits and cost options before building, product requirements and architecture decision records, automated testing, code review, user training and AI workshops
 
 ## Experience
 
