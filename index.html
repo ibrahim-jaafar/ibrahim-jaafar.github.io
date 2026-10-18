@@ -75,6 +75,12 @@ h1{font-size:clamp(38px,6.5vw,64px);line-height:1.05;margin:0 0 12px;letter-spac
 .btn{display:inline-block;padding:11px 20px;border-radius:12px;border:1px solid var(--line);font-weight:600;color:var(--text);background:var(--glass);transition:.2s}
 .btn:hover{color:var(--text);background:var(--glass-hi);transform:translateY(-1px)}
 .btn.primary{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 30px rgba(92,120,255,.35)}
+.ask{position:relative}
+.ask summary{list-style:none;cursor:pointer}
+.ask summary::-webkit-details-marker{display:none}
+.ask-menu{position:absolute;top:calc(100% + 8px);left:0;z-index:5;min-width:230px;display:grid;padding:6px;border:1px solid var(--line);border-radius:12px;background:rgba(10,12,22,.96);backdrop-filter:blur(12px)}
+.ask-menu a{padding:10px 12px;border-radius:8px;color:var(--text)}
+.ask-menu a:hover{background:var(--glass-hi)}
 /* one panel, four figures split by hairlines */
 .stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:44px;border:1px solid var(--line);border-radius:18px;background:var(--glass);backdrop-filter:blur(10px);overflow:hidden}
 .stat{padding:24px 26px;position:relative}
@@ -225,6 +231,14 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   <div class="contact">
     <a class="btn primary" data-mail href="#contact">Email me</a>
     <a class="btn" href="https://www.linkedin.com/in/ibrahim-jaafar-007270121" target="_blank" rel="noopener">LinkedIn</a>
+    <details class="ask">
+      <summary class="btn">Am I a fit? Ask your AI</summary>
+      <div class="ask-menu">
+        <a href="https://chatgpt.com/?q=Read%20https%3A//ibrahim-jaafar.github.io/profile.md%20and%20tell%20me%20how%20well%20Ibrahim%20Jaafar%20fits%20this%20role.%20Be%20specific%20about%20his%20strengths%20and%20any%20gaps.%20Job%20description%3A%20%5Bpaste%20it%20here%5D" target="_blank" rel="noopener">Ask ChatGPT</a>
+        <a href="https://claude.ai/new?q=Read%20https%3A//ibrahim-jaafar.github.io/profile.md%20and%20tell%20me%20how%20well%20Ibrahim%20Jaafar%20fits%20this%20role.%20Be%20specific%20about%20his%20strengths%20and%20any%20gaps.%20Job%20description%3A%20%5Bpaste%20it%20here%5D" target="_blank" rel="noopener">Ask Claude</a>
+        <a href="profile.md" download>Download profile (.md)</a>
+      </div>
+    </details>
   </div>
   <div class="stats">
     <div class="stat"><b>5<small>+ yrs</small></b><span>Engineering &amp; product experience</span></div>
@@ -709,6 +723,8 @@ const spy = new IntersectionObserver(es => es.forEach(e => {
   if (e.isIntersecting && !atBottom()) mark(e.target.id);
 }), { rootMargin: '-45% 0px -50% 0px' });
 links.forEach(a => { const t = document.querySelector(a.hash); if (t) spy.observe(t); });
+const ask = document.querySelector('.ask');
+document.addEventListener('click', e => { if (!ask.contains(e.target)) ask.open = false; });
 const totop = document.querySelector('.totop');
 addEventListener('scroll', () => { if (atBottom()) mark('contact'); totop.classList.toggle('show', scrollY > 400); }, { passive: true });
 
