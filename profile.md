@@ -101,6 +101,7 @@ Employees report bugs, security issues and feature requests from inside the plat
 
 - **Before:** when the company wanted to buy or subscribe to new software, nobody could tell whether staff laptops and computers could run it.
 - **After:** a dashboard collects the hardware specs of every staff computer, so the company can check before buying, and developers know what hardware to build for. It guided the decisions when the macOS version of the platform was developed.
+- **Plugin usage:** a second tab measures the real work done in each tool and its top users, so the company can see which tools people have actually adopted.
 
 ### Newsroom engine (working MVP)
 
@@ -109,17 +110,34 @@ A news-intelligence engine for the company's newsrooms.
 - Collects news from RSS feeds, GDELT and outlet scraping, then groups articles about the same event into stories across languages using AI embeddings.
 - Links names to Wikidata, tags topics with AI, and searches by tags, words and meaning.
 - Raises breaking-news alerts and shows verification signals: who confirms a story and where it started.
-- Each outlet has a research profile covering ownership, funding and leaning.
-- About 8,500 lines with 257 automated tests.
+- Each outlet has a research profile covering ownership, funding and leaning. It starts with 54 outlets in Arabic, English and French.
+- A newsroom screen with movable dashboard panels, a search builder, leaderboards of which outlets break stories first, and exports to CSV, JSON and PDF.
+- Alerts and AI digests in the app or by email, Telegram and Slack. AI use has daily request and spending caps.
+- Planned by studying a leading commercial tool (NewsWhip Spike) feature by feature. About 9,500 lines with 257 automated tests.
 - Tech: Django, PostgreSQL + pgvector, React, AI embeddings.
 
 ### Insert Suggester (in progress)
 
-An AI tool for script writers, designed to read each block of a video script, work out what it's really about, and propose visual inserts (videos, images, articles, X posts) through live search, guided by a bank of past scripts. An earlier version built by an intern failed, so I reviewed its whole codebase, mapped its logic, and am now redesigning it from scratch.
+An AI tool for script writers, designed to read each block of a video script, work out what it's really about, and propose visual inserts (videos, images, articles, X and Telegram posts) through live search, guided by a bank of past scripts. Candidates are judged by looking at their actual video frames.
+
+The version built by an intern didn't work reliably, so I reviewed its whole codebase, mapped its logic into a diagram and logged about 40 problems. I'm fixing them one by one, each with tests: for example strict JSON schemas for every AI step, multilingual embeddings for the script bank, and dates that are never copied from another event.
 
 ## AI agents and automation
 
 I've been building with AI since ChatGPT first came out in late 2022. Today I use Claude Code and other agentic tools every day, and I build my own agents for jobs that would otherwise take hours by hand.
+
+### Agency report automation (in progress, live demo)
+
+Demo: https://ibrahim-jaafar.github.io/agency-demo/
+
+A weekly marketing report for two made-up agency clients, a skin clinic and a home-goods store. It pulls each client's leads and ad spend, sends conversions to Meta, checks the data for mistakes in plain code, and writes a short summary a client can read. Visitors can run it on clean data or break the data on purpose and see what the checks catch.
+
+- **Checks in code, not AI:** leads with no source, duplicates written differently (+961 vs 0, capital letters), Meta and CRM not matching, totals that don't add up, unusually large orders and events Meta rejects.
+- **Edge cases handled:** an empty week shows "no leads yet" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.
+- **Private by design:** the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.
+- **AI kept honest:** its answer must follow a strict JSON schema, and every number it writes must exist in the data. A broken answer is refused and a template summary is used instead.
+- **Status:** the logic is built and covered by 87 automated tests, and the demo runs it in the browser. The live n8n workflow with a GoHighLevel sandbox, Meta test events and Gemini is being connected.
+- Tech: n8n, GoHighLevel API, Meta Conversions API, Gemini (structured output), JavaScript, Supabase.
 
 ### Hermes multi-agent system on Telegram
 
@@ -135,7 +153,7 @@ Four bots, each with its own job, built with Hermes Agent. An orchestrator hands
 
 Product photos for a furniture line without a photo shoot. Products designed in SolidWorks are placed into photoreal scenes by Gemini image generation. Because image models get the scale of objects wrong, Claude also builds each scene in Blender through MCP, using the real furniture dimensions.
 
-- 33 reusable scene scripts: importing parts, building rooms, applying materials, lighting and final polish.
+- 32 reusable scene scripts: importing parts, building rooms, applying materials, lighting and final polish.
 - A written standards library (walls, doors, windows, lighting and camera, furniture clearances) that Claude reads before building, so rooms come out at real-world sizes.
 - Automated checks that measure furniture clearances and catch overlapping objects before rendering.
 - Calibrated scanned fabric materials and Poly Haven textures and lighting for photoreal results.
@@ -214,14 +232,14 @@ A client of Ghandour Solutions wanted their gate to open automatically for truck
 
 ### Software, data and engineering
 
-#### Polymarket research and strategy simulator
+#### Polymarket trader analyser and strategy simulator
 
-Freelance project for a client who wanted market insights and a safe way to test trading strategies. A research toolkit and a strategy simulator that runs on live market data. It was used for simulation and research only, not live trading.
+Freelance project for a client who wanted to learn how successful traders work and test strategies safely. Enter a Polymarket account's wallet address and the tool pulls that trader's whole trade history, then breaks down how they trade. Strategies learned this way are then tested in simulators on live market data. It was used for research and simulation only, not live trading.
 
-- **Strategy engine:** a 10-state decision engine with built-in risk controls: limits on open positions, total exposure and new entries per update, no new entries near expiry, trend confirmation before entering, liquidity checks before buying, and profit targets that adjust as expiry approaches, with hedging to lock in profit when a trade turns. The full logic is documented in a written specification.
-- **Market recorder:** records Bitcoin 15-minute up/down markets, with an interactive player to replay them.
-- **Trade-history collector:** pulls large volumes of past trades from the API, page by page.
-- **Dashboards:** trader performance analysis (Streamlit and Plotly), a live view of every open position, and a desktop browser for simulation logs.
+- **Trade collector:** pulls an account's history from Polymarket's API in 15-minute windows, page by page, skipping duplicates, until it has the number of trades asked for.
+- **Strategy analyser:** per market or across all of them, it tells maker trades from taker trades, and charts entry prices, VWAP over time, and cumulative shares, profit and exposure, so the trader's strategy can be read from the data (Streamlit and Plotly).
+- **Strategy simulator:** a 10-state decision engine that trades on live prices and order books in dry-run mode, with built-in risk controls: limits on open positions, total exposure and new entries per update, no new entries near expiry, trend confirmation before entering, liquidity checks before buying, and profit targets that adjust as expiry approaches, with hedging to lock in profit when a trade turns. The full logic is documented in a written specification.
+- **Market recorder and replay:** records Bitcoin 15-minute up/down markets, with an interactive player to replay them, a live view of every open position, and a dashboard that replays each simulated market's trades and profit.
 - Tech: Python, WebSockets, Streamlit, Plotly, Polymarket and Binance APIs
 
 #### ProMapper
@@ -284,7 +302,7 @@ Home automation for energy metering, automated curtains, climate control and saf
 
 ## Skills
 
-- **AI and agents:** Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, OpenAI / Gemini / Groq / Mistral APIs, LangChain, RAG, embeddings
+- **AI and agents:** Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, OpenAI / Gemini / Groq / Mistral / OpenRouter APIs, structured JSON outputs, LangChain, RAG, embeddings
 - **Automation and integration:** REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n (learning)
 - **Apps and backend:** Python, TypeScript, React, Next.js, FastAPI, Django, Supabase, Postgres, SQLite, Electron, Tauri, Streamlit and Plotly dashboards
 - **Infrastructure:** Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub, role-based access control
