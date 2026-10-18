@@ -127,7 +127,7 @@ li::marker{color:var(--a2)}
 .job{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .job .meta{margin:4px 0 0}
 /* how I work: four numbered steps */
-.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:28px;counter-reset:step}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:28px;counter-reset:step}
 .steps div{position:relative;padding:22px;border:1px solid var(--line);border-radius:18px;background:var(--glass);counter-increment:step}
 .steps div::before{content:"0" counter(step);display:block;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;color:var(--a2);margin-bottom:14px}
 .steps b{display:block;font-family:"Space Grotesk",Inter,sans-serif;font-size:19px;margin-bottom:8px}
@@ -319,6 +319,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   <div class="steps">
     <div><b>Discover</b><p>I sit with each person and have them walk me through their workflow: where their time goes, which tasks repeat, and which are hardest.</p></div>
     <div><b>Analyse</b><p>I map every step in detail and find where the time and errors actually come from, before deciding what to build.</p></div>
+    <div><b>Plan</b><p>I plan every step, set the KPIs and limits, compare cost options, and wait for approval before building.</p></div>
     <div><b>Build</b><p>I design the solution around how people already work, then build it and ship it to production.</p></div>
     <div><b>Adopt</b><p>I train the team on each tool, document it, and keep improving it from their feedback and support tickets.</p></div>
   </div>
