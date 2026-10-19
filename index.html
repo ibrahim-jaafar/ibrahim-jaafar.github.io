@@ -620,14 +620,14 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
 
   <div class="card" data-demo="agency-demo/">
     <h3>Agency report automation (live demo)</h3>
-    <p class="meta">In progress · n8n · GoHighLevel API · Meta Conversions API · Gemini</p>
+    <p class="meta">Live · n8n · GoHighLevel API · Meta Conversions API · Gemini</p>
     <p>A weekly marketing report for two made-up agency clients, a skin clinic and a home-goods store. It pulls each client's leads and ad spend, sends conversions to Meta, checks the data for mistakes in plain code, and writes a short summary a client can read. Visitors can run it on clean data or break the data on purpose and see what the checks catch.</p>
     <ul>
       <li><b>Checks in code, not AI:</b> leads with no source, duplicates written differently (+961 vs 0, capital letters), Meta and CRM not matching, totals that don't add up, unusually large orders and events Meta rejects.</li>
       <li><b>Edge cases handled:</b> an empty week shows "no leads yet" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.</li>
       <li><b>Private by design:</b> the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.</li>
       <li><b>AI kept honest:</b> its answer must follow a strict JSON schema, and every number it writes must exist in the data. A broken answer is refused and a template summary is used instead.</li>
-      <li>In progress: the logic is built and covered by 87 automated tests, and the demo runs it in the browser. The live n8n workflow with a GoHighLevel sandbox, Meta test events and Gemini is being connected.</li>
+      <li><b>Live:</b> an n8n workflow on a free server saves the leads and deals in a GoHighLevel sandbox, sends the conversions to Meta's Conversions API and asks Gemini for the summary. The logic is covered by 94 automated tests.</li>
     </ul>
     <p><a class="btn primary" href="agency-demo/">Try the demo →</a></p>
     <div class="shots"><img src="img/agency-demo.webp" alt="Agency report demo: workflow steps and client report cards" loading="lazy"></div>
@@ -705,7 +705,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   <h2>Tools I work with</h2>
   <div class="skills" style="margin-top:24px">
     <div><b>AI and agents</b><p>Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, OpenAI / Gemini / Groq / Mistral / OpenRouter APIs, structured JSON outputs, LangChain, RAG, embeddings</p></div>
-    <div><b>Automation and integration</b><p>REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n (learning)</p></div>
+    <div><b>Automation and integration</b><p>REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n</p></div>
     <div><b>Apps and backend</b><p>Python, TypeScript, React, Next.js, FastAPI, Django, Supabase, Postgres, SQLite, Electron, Tauri, Streamlit and Plotly dashboards</p></div>
     <div><b>Infrastructure</b><p>Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub, role-based access control</p></div>
     <div><b>Vision and media</b><p>YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, FFmpeg, ElevenLabs</p></div>

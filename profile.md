@@ -126,7 +126,7 @@ The version built by an intern didn't work reliably, so I reviewed its whole cod
 
 I've been building with AI since ChatGPT first came out in late 2022. Today I use Claude Code and other agentic tools every day, and I build my own agents for jobs that would otherwise take hours by hand.
 
-### Agency report automation (in progress, live demo)
+### Agency report automation (live demo)
 
 Demo: https://ibrahim-jaafar.github.io/agency-demo/
 
@@ -136,7 +136,7 @@ A weekly marketing report for two made-up agency clients, a skin clinic and a ho
 - **Edge cases handled:** an empty week shows "no leads yet" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.
 - **Private by design:** the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.
 - **AI kept honest:** its answer must follow a strict JSON schema, and every number it writes must exist in the data. A broken answer is refused and a template summary is used instead.
-- **Status:** the logic is built and covered by 87 automated tests, and the demo runs it in the browser. The live n8n workflow with a GoHighLevel sandbox, Meta test events and Gemini is being connected.
+- **Live:** an n8n workflow on a free server saves the leads and deals in a GoHighLevel sandbox, sends the conversions to Meta's Conversions API and asks Gemini for the summary. The logic is covered by 94 automated tests.
 - Tech: n8n, GoHighLevel API, Meta Conversions API, Gemini (structured output), JavaScript, Supabase.
 
 ### Hermes multi-agent system on Telegram
@@ -303,7 +303,7 @@ Home automation for energy metering, automated curtains, climate control and saf
 ## Skills
 
 - **AI and agents:** Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, OpenAI / Gemini / Groq / Mistral / OpenRouter APIs, structured JSON outputs, LangChain, RAG, embeddings
-- **Automation and integration:** REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n (learning)
+- **Automation and integration:** REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n
 - **Apps and backend:** Python, TypeScript, React, Next.js, FastAPI, Django, Supabase, Postgres, SQLite, Electron, Tauri, Streamlit and Plotly dashboards
 - **Infrastructure:** Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub, role-based access control
 - **Vision and media:** YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, FFmpeg, ElevenLabs
