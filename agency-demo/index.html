@@ -40,6 +40,10 @@ h2{font-size:22px;margin:0 0 14px}
 .panel{border:1px solid var(--line);border-radius:18px;background:var(--glass);backdrop-filter:blur(10px);padding:20px;margin:0 0 18px}
 .note{border-left:3px solid var(--a2);padding:12px 16px;background:rgba(63,169,255,.07);border-radius:0 12px 12px 0;font-size:14.5px;color:#cfd3e3;margin:0 0 18px}
 .note b{color:var(--text)}
+#notice{margin:14px 0 0}
+.real{margin:0 0 18px}
+.real p{font-size:14.5px;color:#cfd3e3;margin:0 0 10px}
+.real p:last-child{margin:0}
 
 /* scenario picker */
 .modes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
@@ -72,6 +76,8 @@ h2{font-size:22px;margin:0 0 14px}
 .done .dot{background:var(--good)}
 .warn .dot{background:var(--warn)}
 .failed .dot{background:var(--bad)}
+.stopped .dot{background:#5b6078}
+.stopped small{font-style:italic}
 .failed{border-color:rgba(251,113,133,.45)}
 @keyframes pulse{50%{opacity:.3}}
 @media (prefers-reduced-motion:reduce){.running .dot{animation:none}}
@@ -128,7 +134,11 @@ footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
   <h1>Agency report <span>automation</span></h1>
   <p class="lead">Every week a marketing agency has to tell each client how their ads did. This workflow pulls the leads, the ad spend and the conversions sent to Meta, checks the data for mistakes in plain code, and writes a short summary a client can read. Two made-up clients: a skin clinic and a home-goods store.</p>
 
-  <p class="note"><b>Preview.</b> This page runs the project's tested code (80+ automated tests) in your browser with made-up data. The live version is being connected: an n8n workflow on a free server that uses a GoHighLevel sandbox, Meta's Conversions API with test events, and Gemini for the summary. Nothing you do here is sent anywhere.</p>
+  <details class="real" open><summary>What’s real here?</summary><div>
+    <p><b>Live:</b> an n8n workflow on a free server. Each run saves the leads and deals in a GoHighLevel sandbox (two sub-accounts), sends the conversions to Meta’s Conversions API (a demo dataset that runs no ads), runs the data checks, and asks Gemini to write the summary. Every number Gemini writes is checked against the data; if one doesn’t match, a template writes the summary instead.</p>
+    <p><b>Made up:</b> the two clients, their leads, the ad spend and the mistakes you choose. The demo data can contain mistakes on purpose: that is what the checks are for.</p>
+    <p>The free server sleeps when nobody uses it, so the first run of the day can take a minute to start. One run at a time, at most one a minute.</p>
+  </div></details>
 
   <section class="panel" aria-labelledby="t-scn">
     <h2 id="t-scn">1. Pick the test data</h2>
@@ -144,6 +154,7 @@ footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
       <button class="btn" id="run" type="button">Run the report</button>
       <span class="hint">Made up: the clients, their leads, the ad spend and any mistakes you chose.</span>
     </div>
+    <p class="note" id="notice" role="status" hidden></p>
   </section>
 
   <section class="panel" aria-labelledby="t-steps">
@@ -156,226 +167,11 @@ footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
   <section aria-labelledby="t-under">
     <h2 id="t-under" style="margin-top:8px">Under the hood</h2>
     <details><summary>What the AI receives (totals only, never names, phones or emails)</summary><div><pre id="ai-in"></pre></div></details>
-    <details><summary>What Meta receives (personal fields SHA-256 hashed)</summary><div><pre id="meta-out"></pre></div></details>
-    <details><summary>The made-up leads in the CRM</summary><div id="leads"></div></details>
+    <details><summary>What Meta receives: one example event (personal fields SHA-256 hashed)</summary><div><pre id="meta-out"></pre></div></details>
   </section>
 </main>
 <footer class="wrap">Built by <a href="../">Ibrahim Jaafar</a>. Plain-code checks first, AI only for wording, and every number the AI writes must exist in the data.</footer>
 
-<script type="module">
-import { makeRng } from './lib/rng.js';
-import { PROBLEMS, parseScenario, resolveProblems } from './lib/scenario.js';
-import { generateLeads } from './lib/leads.js';
-import { simulateSpend } from './lib/spend.js';
-import { computeKpis } from './lib/kpis.js';
-import { runChecks } from './lib/checks.js';
-import { buildMetaEvents } from './lib/meta.js';
-import { buildAiInput, validateAiOutput, templateSummary } from './lib/ai.js';
-import { buildReport } from './lib/report.js';
-
-const CLIENTS = [
-  { client: 'clinic', name: 'Lumière Skin Clinic', kind: 'Medical aesthetics clinic' },
-  { client: 'store', name: 'Northwind Home', kind: 'Online home-goods store' },
-];
-const PROBLEM_TEXT = {
-  missing_source: ['Leads with no source', 'The CRM lost which ad brought them'],
-  duplicates: ['Duplicate leads', 'Same person, phone or email written differently'],
-  meta_mismatch: ['Meta and CRM don’t match', 'Some conversions never reach Meta'],
-  bad_totals: ['Totals that don’t add up', 'Account total ≠ sum of its campaigns'],
-  edge_cases: ['Edge cases', 'Empty week, cancelled booking, huge order, Arabic and emoji names, an event Meta rejects'],
-  ai_broken: ['AI gives a broken answer', 'Invented number, missing field: the template takes over'],
-};
-const WARNING_FROM = { missing_source: 'missing_source', duplicates: 'duplicates', meta_mismatch: 'meta_mismatch', bad_totals: 'bad_totals', outlier: 'edge_cases', meta_rejected: 'edge_cases' };
-const STEPS = [['ghl', 'GoHighLevel leads'], ['spend', 'Ad spend'], ['meta', 'Meta conversions'], ['checks', 'Data checks'], ['ai', 'AI summary']];
-const KPI_TEXT = {
-  clinic: [['leads', 'Leads'], ['bookings', 'Booked consultations'], ['bookingRate', 'Lead-to-booking rate', 'pct'], ['spend', 'Ad spend', 'usd', 0], ['costPerLead', 'Cost per paid lead', 'usd', -1], ['costPerBooking', 'Cost per booking', 'usd', -1], ['cancelled', 'Cancelled', '', -1]],
-  store: [['orders', 'Orders'], ['revenue', 'Revenue', 'usd'], ['roas', 'Return on ad spend', 'x'], ['spend', 'Ad spend', 'usd', 0], ['costPerOrder', 'Cost per order', 'usd', -1], ['avgOrderValue', 'Average order', 'usd'], ['leads', 'Leads'], ['cancelled', 'Refunded', '', -1]],
-};
-
-const $ = s => document.querySelector(s);
-// ponytail: tiny element builder; text always goes in as textContent, never as HTML
-function h(tag, attrs = {}, ...kids) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) k === 'class' ? (el.className = v) : el.setAttribute(k, v);
-  el.append(...kids.flat().filter(k => k != null && k !== false));
-  return el;
-}
-const usd = n => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const fmt = (v, type) => v == null ? '—' : type === 'usd' ? usd(v) : type === 'pct' ? `${Math.round(v * 1000) / 10}%` : type === 'x' ? `${v}×` : String(v);
-const wait = ms => new Promise(r => setTimeout(r, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : ms));
-const store = { get(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch { return null; } }, set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch {} } };
-
-// scenario panel
-const box = $('#problems');
-for (const p of PROBLEMS) {
-  box.append(h('label', {}, h('input', { type: 'checkbox', value: p }), h('span', {}, PROBLEM_TEXT[p][0], h('small', {}, PROBLEM_TEXT[p][1]))));
-}
-document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => { box.hidden = !$('#m-custom').checked; }));
-
-function scenario() {
-  const mode = document.querySelector('input[name=mode]:checked').value;
-  return { mode, problems: [...box.querySelectorAll('input:checked')].map(i => i.value) };
-}
-
-// step strip
-const chips = Object.fromEntries(STEPS.map(([key, label]) => [key, h('li', { class: 'chip' }, h('b', {}, h('i', { class: 'dot' }), label), h('small', {}, 'Waiting'))]));
-$('#steps').append(...Object.values(chips));
-function setStep(key, state, note) {
-  chips[key].className = `chip ${state}`;
-  chips[key].querySelector('small').textContent = note;
-}
-
-async function sha256Hex(text) {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
-  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-}
-// buildMetaEvents wants a synchronous hash: collect the values first, hash them, then build for real
-async function metaEventsFor(client, leads, problems, nowSec) {
-  const values = new Set();
-  buildMetaEvents(client, leads, problems, nowSec, v => (values.add(v), ''));
-  const hashed = new Map(await Promise.all([...values].map(async v => [v, await sha256Hex(v)])));
-  return buildMetaEvents(client, leads, problems, nowSec, v => hashed.get(v));
-}
-
-function lastMondayUtc(now) {
-  const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
-  return d;
-}
-
-async function run(body, pace = 450) {
-  const seed = crypto.getRandomValues(new Uint32Array(1))[0];
-  const rng = makeRng(seed);
-  const problems = resolveProblems(parseScenario(body), rng);
-  const now = new Date();
-  const weekStart = lastMondayUtc(now);
-  const nowSec = Math.floor(+now / 1000);
-  STEPS.forEach(([k]) => setStep(k, '', 'Waiting'));
-  const steps = [];
-  const done = (key, state, note, reason) => { setStep(key, state, note); steps.push({ key, status: state === 'failed' ? 'failed' : 'done', ...(reason ? { reason } : {}) }); };
-
-  setStep('ghl', 'running', 'Pulling this week’s leads…'); await wait(pace);
-  const data = CLIENTS.map(c => ({ ...c, leads: generateLeads(c.client, problems, rng, weekStart) }));
-  done('ghl', 'done', `${data.reduce((a, c) => a + c.leads.length, 0)} leads from 2 sub-accounts`);
-
-  setStep('spend', 'running', 'Reading campaign spend…'); await wait(pace);
-  data.forEach(c => { c.spend = simulateSpend(c.client, c.leads, problems, rng); });
-  done('spend', 'done', `${usd(data.reduce((a, c) => a + c.spend.campaigns.reduce((s, x) => s + x.spend, 0), 0))} (simulated)`);
-
-  setStep('meta', 'running', 'Hashing and sending conversions…'); await wait(pace);
-  let metaSkipped = 0, sample = null;
-  for (const c of data) {
-    const m = await metaEventsFor(c.client, c.leads, problems, nowSec);
-    metaSkipped += m.skipped;
-    sample ??= m.events[0] ?? m.edgeEvents[0] ?? null;
-    // ponytail: preview stand-in for Meta's answer: the batch is accepted, an event over 7 days old is rejected
-    c.meta = { accepted: m.events.length, rejected: m.edgeEvents.length };
-  }
-  const rejected = data.reduce((a, c) => a + c.meta.rejected, 0);
-  done('meta', rejected ? 'warn' : 'done', `${data.reduce((a, c) => a + c.meta.accepted, 0)} accepted${rejected ? ` · ${rejected} rejected` : ''}`);
-
-  setStep('checks', 'running', 'Running the checks…'); await wait(pace);
-  data.forEach(c => {
-    c.warnings = runChecks({ client: c.client, leads: c.leads, spend: c.spend, meta: c.meta, weekStart });
-    c.kpis = computeKpis(c.client, c.leads, c.spend, weekStart);
-    c.previousKpis = store.get(`kpis-${c.client}`);
-  });
-  const nWarn = data.reduce((a, c) => a + c.warnings.length, 0);
-  done('checks', nWarn ? 'warn' : 'done', nWarn ? `${nWarn} warning${nWarn > 1 ? 's' : ''}` : 'All checks passed');
-
-  setStep('ai', 'running', 'Writing the summary…'); await wait(pace);
-  const aiInput = buildAiInput(data);
-  const template = templateSummary(aiInput);
-  let ai;
-  if (problems.includes('ai_broken')) {
-    // a broken answer: an invented number and a missing field, so validation must refuse it
-    const broken = structuredClone(template);
-    broken.overview = 'Revenue rose 9,876% this week for both clients.';
-    delete broken.clients[1].next_steps;
-    const check = validateAiOutput(JSON.stringify(broken), aiInput);
-    ai = { source: 'template', value: template };
-    done('ai', 'failed', `Answer refused (${check.errors[0]}); template used`, check.errors.join('; '));
-  } else {
-    ai = { source: 'template', value: template };
-    done('ai', 'done', 'Template text in the preview; Gemini when live');
-  }
-
-  const report = buildReport({ runId: `preview-${seed.toString(36)}`, weekStart, clients: data, steps, ai, problems, metaSkipped });
-  data.forEach(c => store.set(`kpis-${c.client}`, c.kpis));
-  render(report, data, problems);
-  $('#ai-in').textContent = JSON.stringify(aiInput, null, 2);
-  $('#meta-out').textContent = sample ? JSON.stringify({ data: [sample], test_event_code: 'TEST…' }, null, 2) : 'No conversions this run, so nothing is sent to Meta.';
-  renderLeads(data, weekStart);
-}
-
-function render(report, data, problems) {
-  const out = [];
-  const head = h('div', { class: 'panel' }, h('h2', {}, '3. The report'), h('p', { class: 'overview' }, report.overview));
-  if (report.partial) head.append(h('p', { class: 'partial' }, 'Partial report: a step failed, so part of it was built without that step. See the workflow above.'));
-  out.push(head);
-
-  if (report.injected.length) {
-    const list = h('ul', { class: 'caught' }, report.injected.map(i => h('li', {}, h('span', {}, PROBLEM_TEXT[i.problem][0]),
-      i.caught === null ? h('span', { class: 'tag na' }, 'Not applicable: no conversions to hold back')
-        : h('span', { class: `tag ${i.caught ? 'yes' : 'no'}` }, i.caught ? 'Caught' : 'Missed'))));
-    out.push(h('div', { class: 'panel' }, h('h2', {}, 'Did the checks catch the mistakes?'), list));
-  } else if (!problems.length) {
-    out.push(h('p', { class: 'note' }, 'No mistakes were put in the data this run, so every light should be green.'));
-  }
-
-  const lightText = { green: 'All checks passed', orange: 'Check the warnings', red: 'A step failed' };
-  const cards = report.clients.map(c => {
-    const info = CLIENTS.find(x => x.client === c.client);
-    const s = c.summary;
-    const kpis = KPI_TEXT[c.client].map(([key, label, type, sense = 1]) => {
-      const ch = c.changes?.[key];
-      const dir = ch == null || ch === 0 || sense === 0 ? 'flat' : (ch > 0) === (sense > 0) ? 'up' : 'down';
-      return h('div', { class: 'kpi' }, h('span', {}, label), h('b', {}, fmt(c.kpis[key], type)),
-        ch != null ? h('em', { class: dir }, `${ch > 0 ? '▲' : ch < 0 ? '▼' : ''} ${Math.abs(ch)}% vs last run`) : null);
-    });
-    return h('article', { class: 'panel client' },
-      h('header', {}, h('div', {}, h('h3', {}, c.name), h('span', { class: 'kind' }, info.kind)),
-        h('span', { class: `light ${c.light}` }, h('i'), lightText[c.light])),
-      h('p', { class: 'headline' }, s.headline),
-      h('div', { class: 'kpis' }, kpis),
-      h('p', {}, s.summary),
-      c.warnings.length ? [h('h4', {}, 'Warnings'), h('ul', {}, c.warnings.map(w => h('li', {}, w.message, problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null)))] : null,
-      h('h4', {}, 'Next steps'), h('ul', {}, s.next_steps.map(n => h('li', {}, n))));
-  });
-  out.push(h('div', { class: 'clients' }, cards));
-  $('#result').replaceChildren(...out);
-}
-
-function renderLeads(data, weekStart) {
-  const end = +weekStart + 7 * 864e5;
-  const blocks = data.map(c => h('div', {}, h('h3', { style: 'font-size:15px;margin:12px 0 6px' }, c.name),
-    h('table', {}, h('thead', {}, h('tr', {}, ['Name', 'Source', 'Created (UTC)', 'Outcome', 'Value', 'Note'].map(t => h('th', {}, t)))),
-      h('tbody', {}, c.leads.length ? c.leads.map(l => h('tr', {},
-        h('td', {}, `${l.firstName} ${l.lastName}`), h('td', {}, l.source ?? '(missing)'),
-        h('td', { class: 'mono' }, l.createdAt.slice(0, 16).replace('T', ' ')), h('td', {}, l.outcome),
-        h('td', {}, l.value ? usd(l.value) : '—'),
-        h('td', {}, h('small', {}, [...l.flags, Date.parse(l.createdAt) >= end ? 'next week' : null].filter(Boolean).join(', ')))))
-        : h('tr', {}, h('td', { colspan: 6 }, 'No leads this week (an edge case).'))))));
-  $('#leads').replaceChildren(...blocks);
-}
-
-const btn = $('#run');
-async function go(body, pace) {
-  btn.disabled = true;
-  btn.textContent = 'Running…';
-  try {
-    await run(body, pace);
-  } catch (err) {
-    console.error(err);
-    $('#result').prepend(h('div', { class: 'panel error' }, h('h2', {}, 'Something went wrong'), h('p', {}, 'The preview hit an error and stopped. The last report is kept below. Please try again.')));
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Run the report';
-  }
-}
-btn.addEventListener('click', () => go(scenario()).then(() => $('#result').scrollIntoView({ behavior: 'smooth', block: 'start' })));
-// the page is never empty: a first report on load, without the animation
-go({ mode: 'random' }, 0);
-</script>
+<script type="module" src="app.js"></script>
 </body>
 </html>
