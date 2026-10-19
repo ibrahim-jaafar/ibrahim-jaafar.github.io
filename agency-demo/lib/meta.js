@@ -6,6 +6,9 @@ export function hashField(value, sha256) {
   return v ? sha256(v) : undefined;
 }
 
+// Meta wants names lowercase with no punctuation; letters in any alphabet stay (sent as UTF-8)
+export const cleanName = s => String(s ?? '').replace(/[\p{P}\p{S}]/gu, '');
+
 export function buildMetaEvents(client, leads, problems, nowSec, sha256) {
   const conv = leads.filter(l => l.outcome === 'converted');
   const skipped = problems.includes('meta_mismatch') ? (conv.length >= 3 ? 2 : Math.min(1, conv.length)) : 0;
@@ -14,8 +17,8 @@ export function buildMetaEvents(client, leads, problems, nowSec, sha256) {
     const ud = {
       em: hashField(l.email, sha256),
       ph: hashField(`961${normalisePhone(l.phone)}`, sha256),
-      fn: hashField(l.firstName, sha256),
-      ln: hashField(l.lastName, sha256),
+      fn: hashField(cleanName(l.firstName), sha256),
+      ln: hashField(cleanName(l.lastName), sha256),
     };
     const user_data = Object.fromEntries(Object.entries(ud).filter(([, v]) => v).map(([k, v]) => [k, [v]]));
     const e = {
