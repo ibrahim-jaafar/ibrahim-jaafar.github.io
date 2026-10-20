@@ -1,6 +1,6 @@
 # Ibrahim Jaafar, AI Specialist
 
-Automation, AI agents and business systems. Based in Lebanon (Beirut time), working remotely. Open to remote roles and can start immediately.
+Automation, AI agents and business systems. Based in Lebanon (Beirut time), working remotely; available to work US business hours. Open to remote roles and can start immediately.
 
 Website: https://ibrahim-jaafar.github.io · LinkedIn: https://www.linkedin.com/in/ibrahim-jaafar-007270121
 
