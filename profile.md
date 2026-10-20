@@ -138,7 +138,7 @@ A weekly marketing report for two made-up agency clients, a skin clinic and a ho
 - **Edge cases handled:** an empty week shows "no leads yet" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.
 - **Private by design:** the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.
 - **AI kept honest:** it never types a number; it writes placeholders, each next to its own label, and the code fills in the real values. Its answer must also follow a strict JSON schema. A broken answer is refused and a template summary is used instead.
-- **Live:** two n8n workflows on a free server: one plays the customers and saves them in a GoHighLevel sandbox; the other, the report a real client would get, reads them back, sends the conversions to Meta's Conversions API and asks Gemini for the summary. The logic is covered by 103 automated tests.
+- **Live:** two n8n workflows on a free server: one plays the customers and saves them in a GoHighLevel sandbox; the other, the report a real client would get, reads them back, sends the conversions to Meta's Conversions API and asks Gemini for the summary. The logic is covered by 106 automated tests.
 - Tech: n8n, GoHighLevel API, Meta Conversions API, Gemini (structured output), JavaScript, Supabase.
 
 ### Hermes multi-agent system on Telegram

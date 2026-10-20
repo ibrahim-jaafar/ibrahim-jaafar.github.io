@@ -27,6 +27,16 @@ export function inPeriod(lead, weekStart) {
   return t >= +weekStart && t < +weekStart + 7 * DAY_MS;
 }
 
+// GoHighLevel sends a long list one page per reply. Join the pages; null if any page failed.
+// `more`: we stopped at maxPages while the last page was still full, so the list may go on.
+export function joinPages(pages, key, maxPages, pageSize) {
+  if (!pages?.length || pages.some(p => p.statusCode !== 200)) return null;
+  const rows = pages.flatMap(p => p.body?.[key] || []);
+  // a record added while we read can push another onto the next page twice; keep one of each
+  const one = [...new Map(rows.map(r => [r.id, r])).values()];
+  return { rows: one, more: pages.length >= maxPages && (pages.at(-1).body?.[key] || []).length >= pageSize };
+}
+
 export function generateLeads(client, problems, rng, weekStart) {
   const pick = arr => arr[Math.floor(rng() * arr.length)];
   const between = (lo, hi) => lo + Math.floor(rng() * (hi - lo + 1));
