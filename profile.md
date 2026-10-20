@@ -135,8 +135,8 @@ A weekly marketing report for two made-up agency clients, a skin clinic and a ho
 - **Checks in code, not AI:** leads with no source, duplicates written differently (+961 vs 0, capital letters), Meta and CRM not matching, totals that don't add up, unusually large orders and events Meta rejects.
 - **Edge cases handled:** an empty week shows "no leads yet" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.
 - **Private by design:** the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.
-- **AI kept honest:** its answer must follow a strict JSON schema, and every number it writes must exist in the data. A broken answer is refused and a template summary is used instead.
-- **Live:** an n8n workflow on a free server saves the leads and deals in a GoHighLevel sandbox, sends the conversions to Meta's Conversions API and asks Gemini for the summary. The logic is covered by 96 automated tests.
+- **AI kept honest:** it never types a number; it writes placeholders and the code fills in the real values. Its answer must also follow a strict JSON schema. A broken answer is refused and a template summary is used instead.
+- **Live:** an n8n workflow on a free server saves the leads and deals in a GoHighLevel sandbox, sends the conversions to Meta's Conversions API and asks Gemini for the summary. The logic is covered by 99 automated tests.
 - Tech: n8n, GoHighLevel API, Meta Conversions API, Gemini (structured output), JavaScript, Supabase.
 
 ### Hermes multi-agent system on Telegram

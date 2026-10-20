@@ -135,7 +135,7 @@ footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
   <p class="lead">Every week a marketing agency has to tell each client how their ads did. This workflow pulls the leads, the ad spend and the conversions sent to Meta, checks the data for mistakes in plain code, and writes a short summary a client can read. Two made-up clients: a skin clinic and a home-goods store.</p>
 
   <details class="real" open><summary>What’s real here?</summary><div>
-    <p><b>Live:</b> an n8n workflow on a free server. Each run saves the leads and deals in a GoHighLevel sandbox (two sub-accounts), sends the conversions to Meta’s Conversions API (a demo dataset that runs no ads), runs the data checks, and asks Gemini to write the summary. Every number Gemini writes is checked against the data; if one doesn’t match, a template writes the summary instead.</p>
+    <p><b>Live:</b> an n8n workflow on a free server. Each run saves the leads and deals in a GoHighLevel sandbox (two sub-accounts), sends the conversions to Meta’s Conversions API (a demo dataset that runs no ads), runs the data checks, and asks Gemini to write the summary. Gemini never types a number: it writes placeholders and the code fills in the real values. If its answer breaks a rule, a template writes the summary instead.</p>
     <p><b>Made up:</b> the two clients, their leads, the ad spend and the mistakes you choose. The demo data can contain mistakes on purpose: that is what the checks are for.</p>
     <p>The free server sleeps when nobody uses it, so the first run of the day can take a minute to start. One run at a time, at most one a minute.</p>
   </div></details>
@@ -170,7 +170,7 @@ footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
     <details><summary>What Meta receives: one example event (personal fields SHA-256 hashed)</summary><div><pre id="meta-out"></pre></div></details>
   </section>
 </main>
-<footer class="wrap">Built by <a href="../">Ibrahim Jaafar</a>. Plain-code checks first, AI only for wording, and every number the AI writes must exist in the data.</footer>
+<footer class="wrap">Built by <a href="../">Ibrahim Jaafar</a>. Plain-code checks first, AI only for wording, and every number in the summary is filled in by code.</footer>
 
 <script type="module" src="app.js"></script>
 </body>

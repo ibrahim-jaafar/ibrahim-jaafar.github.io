@@ -1,5 +1,6 @@
 // What the AI sees, the strict shape its answer must have, checks on that answer, and a template fallback.
-// The AI only writes text. It never sees personal data and can't change a number or a warning.
+// The AI only writes text. It never sees personal data and never types a number: it writes {placeholders}
+// and code fills in the real values, so a number in the summary can't be wrong.
 
 const KPI_KEYS = {
   clinic: ['spend', 'leads', 'paidLeads', 'costPerLead', 'cancelled', 'bookings', 'costPerBooking', 'bookingRate'],
@@ -45,7 +46,7 @@ export function buildAiInput(clients) {
     clients: clients.map(c => {
       const kpis = pickKpis(c.client, c.kpis);
       const previousKpis = pickKpis(c.client, c.previousKpis);
-      return {
+      const out = {
         client: c.client,
         name: c.name,
         kpis,
@@ -53,47 +54,61 @@ export function buildAiInput(clients) {
         changes: pctChanges(kpis, previousKpis),
         warnings: (c.warnings || []).map(w => ({ code: w.code, count: w.count, message: w.message })),
       };
+      // what the writer may use, and what the reader will see in its place
+      return { ...out, placeholders: placeholderValues(out) };
     }),
   };
 }
 
-function checkSchema(value, schema, path, errors) {
+function checkSchema(value, schema, path, errors, lengths = true) {
   if (schema.type === 'object') {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return errors.push(`${path} must be an object`);
     for (const k of schema.required) if (!(k in value)) errors.push(`${path}.${k} is missing`);
     for (const k of Object.keys(value)) {
       if (!schema.properties[k]) errors.push(`${path}.${k} is not allowed`);
-      else checkSchema(value[k], schema.properties[k], `${path}.${k}`, errors);
+      else checkSchema(value[k], schema.properties[k], `${path}.${k}`, errors, lengths);
     }
   } else if (schema.type === 'array') {
     if (!Array.isArray(value)) return errors.push(`${path} must be a list`);
     if (schema.minItems != null && value.length < schema.minItems) errors.push(`${path} needs at least ${schema.minItems} items`);
     if (schema.maxItems != null && value.length > schema.maxItems) errors.push(`${path} allows at most ${schema.maxItems} items`);
-    value.forEach((v, i) => checkSchema(v, schema.items, `${path}[${i}]`, errors));
+    value.forEach((v, i) => checkSchema(v, schema.items, `${path}[${i}]`, errors, lengths));
   } else if (schema.type === 'string') {
     if (typeof value !== 'string') return errors.push(`${path} must be text`);
-    if (schema.maxLength != null && value.length > schema.maxLength) errors.push(`${path} is too long`);
+    if (lengths && schema.maxLength != null && value.length > schema.maxLength) errors.push(`${path} is too long`);
     if (schema.enum && !schema.enum.includes(value)) errors.push(`${path} must be one of ${schema.enum.join(', ')}`);
   }
 }
 
-function allowedNumbers(input) {
-  const out = [];
-  const walk = v => {
-    if (typeof v === 'number' && Number.isFinite(v)) out.push(Math.abs(v), Math.abs(v) * 100);
-    else if (typeof v === 'string') numbersIn(v).forEach(n => out.push(n));
-    else if (v && typeof v === 'object') Object.values(v).forEach(walk);
-  };
-  walk(input);
+const roundTo = (n, d) => Math.round(n * 10 ** d) / 10 ** d;
+const money = n => `$${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+const pct = n => `${roundTo(n * 100, 1)}%`;
+const MONEY = new Set(['spend', 'costPerLead', 'costPerBooking', 'revenue', 'costPerOrder', 'avgOrderValue']);
+const show = (key, v) => (MONEY.has(key) ? money(v) : key === 'bookingRate' ? pct(v) : String(v));
+const direction = ch => (ch > 0 ? `up ${ch}%` : ch < 0 ? `down ${-ch}%` : 'unchanged');
+
+// What each {placeholder} becomes for one client. A number with no value (nothing to divide by, no previous report) has none.
+export function placeholderValues(c) {
+  const out = {};
+  for (const [k, v] of Object.entries(c.kpis || {})) if (typeof v === 'number' && Number.isFinite(v)) out[k] = show(k, v);
+  for (const [k, v] of Object.entries(c.changes || {})) if (v != null) out[`${k}_change`] = direction(v);
+  for (const w of c.warnings || []) { out[`${w.code}_count`] = String(w.count); out[`${w.code}_message`] = w.message; }
   return out;
 }
 
-function numbersIn(text) {
-  return (text.match(/\d[\d,]*(?:\.\d+)?/g) || []).map(s => Number(s.replace(/,/g, '')));
-}
+const PLACEHOLDER = /\{(\w+)\}/g;
+// "rose {leads_change}" would read "rose down 33%": the change already says which way
+const DIRECTION_WORD = /\b(?:rose|rise|risen|rising|fell|fall|fallen|falling|increased?|increasing|decreased?|decreasing|grew|grow|grown|dropped|drop|declined?|up|down|higher|lower|gained?|lost)\s+(?:by\s+)?\{\w+_change\}/i;
 
-const roundTo = (n, d) => Math.round(n * 10 ** d) / 10 ** d;
-const matches = (n, a) => [0, 1, 2].some(d => Math.abs(n - roundTo(a, d)) < 1e-9);
+// The writer never types a number: it writes {placeholders} and code puts the real values in.
+function fill(text, values, path, errors) {
+  if (/\d/.test(text.replace(PLACEHOLDER, ''))) errors.push(`${path} types a number instead of using a placeholder`);
+  if (DIRECTION_WORD.test(text)) errors.push(`${path} says up or down next to a change that already says it`);
+  return text.replace(PLACEHOLDER, (m, name) => {
+    if (!(name in values)) { errors.push(`${path} uses {${name}}, which has no value`); return m; }
+    return values[name];
+  });
+}
 
 export function validateAiOutput(raw, input) {
   let value = raw;
@@ -101,54 +116,68 @@ export function validateAiOutput(raw, input) {
     try { value = JSON.parse(raw); } catch { return { ok: false, errors: ['answer is not valid JSON'] }; }
   }
   const errors = [];
-  checkSchema(value, AI_SCHEMA, 'answer', errors);
+  checkSchema(value, AI_SCHEMA, 'answer', errors, false); // lengths are checked after filling: {costPerBooking_change} is longer than "up 58%"
   if (errors.length) return { ok: false, errors };
+  if (new Set(value.clients.map(c => c.client)).size !== 2) return { ok: false, errors: ['answer must cover the clinic and the store once each'] };
 
-  if (new Set(value.clients.map(c => c.client)).size !== 2) errors.push('answer must cover the clinic and the store once each');
-
-  const allowed = allowedNumbers(input);
-  const texts = [value.overview, ...value.clients.flatMap(c => [c.headline, c.summary, ...c.warnings_explained, ...c.next_steps])];
-  for (const n of texts.flatMap(numbersIn)) {
-    if (!allowed.some(a => matches(n, a))) errors.push(`the number ${n} is not in the data`);
-  }
-  return errors.length ? { ok: false, errors } : { ok: true, value };
+  const values = Object.fromEntries(input.clients.map(c => [c.client, placeholderValues(c)]));
+  const filled = {
+    overview: fill(value.overview, {}, 'overview', errors), // the overview spans both clients, so it has no numbers
+    clients: value.clients.map((c, i) => {
+      const v = values[c.client] || {}, p = `clients[${i}]`;
+      return {
+        ...c,
+        headline: fill(c.headline, v, `${p}.headline`, errors),
+        summary: fill(c.summary, v, `${p}.summary`, errors),
+        warnings_explained: c.warnings_explained.map((t, j) => fill(t, v, `${p}.warnings_explained[${j}]`, errors)),
+        next_steps: c.next_steps.map((t, j) => fill(t, v, `${p}.next_steps[${j}]`, errors)),
+      };
+    }),
+  };
+  if (!errors.length) checkSchema(filled, AI_SCHEMA, 'answer', errors); // now the lengths, as the reader will see them
+  return errors.length ? { ok: false, errors } : { ok: true, value: filled };
 }
 
-const money = n => `$${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
-const pct = n => `${roundTo(n * 100, 1)}%`;
-const count = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-const change = (ch, key) => (ch && ch[key] != null ? ` (${ch[key] >= 0 ? 'up' : 'down'} ${Math.abs(ch[key])}% on the last run)` : '');
+const count = (n, key, one, many) => `{${key}} ${n === 1 ? one : many}`;
+const change = (ch, key) => (ch && ch[key] != null ? ` ({${key}_change} compared with the last run)` : '');
 
-export function templateSummary(input) {
+// The fallback summary, written with the same placeholders as the AI and checked by the same code.
+export function templateDraft(input) {
   const clients = input.clients.map(c => {
     const k = c.kpis;
     let headline, summary;
     if (!k.leads) {
       headline = 'No leads yet this week';
-      summary = `No leads yet this week, with ${money(k.spend)} of ad spend so far.`;
+      summary = 'No leads yet this week, with {spend} of ad spend so far.';
     } else if (c.client === 'clinic') {
-      headline = `${count(k.leads, 'lead', 'leads')} and ${count(k.bookings, 'booked consultation', 'booked consultations')}`;
-      summary = `${count(k.leads, 'lead', 'leads')}${change(c.changes, 'leads')}, ${count(k.bookings, 'booked consultation', 'booked consultations')}`
-        + (k.bookingRate != null ? ` (${pct(k.bookingRate)} of leads)` : '')
-        + `. Ad spend ${money(k.spend)}`
-        + (k.costPerLead != null ? `, ${money(k.costPerLead)} per paid lead` : '')
-        + (k.costPerBooking != null ? `, ${money(k.costPerBooking)} per booking` : '') + '.';
+      headline = `${count(k.leads, 'leads', 'lead', 'leads')} and ${count(k.bookings, 'bookings', 'booked consultation', 'booked consultations')}`;
+      summary = `${count(k.leads, 'leads', 'lead', 'leads')}${change(c.changes, 'leads')}, ${count(k.bookings, 'bookings', 'booked consultation', 'booked consultations')}`
+        + (k.bookingRate != null ? ' ({bookingRate} of leads)' : '')
+        + '. Ad spend {spend}'
+        + (k.costPerLead != null ? ', {costPerLead} per paid lead' : '')
+        + (k.costPerBooking != null ? ', {costPerBooking} per booking' : '') + '.';
     } else {
-      headline = `${money(k.revenue)} revenue from ${count(k.orders, 'order', 'orders')}`;
-      summary = `${count(k.orders, 'order', 'orders')} and ${money(k.revenue)} revenue${change(c.changes, 'revenue')}. Ad spend ${money(k.spend)}`
-        + (k.roas != null ? `, return on ad spend ${k.roas}` : '')
-        + (k.costPerOrder != null ? `, ${money(k.costPerOrder)} per order` : '') + '.';
+      headline = `{revenue} revenue from ${count(k.orders, 'orders', 'order', 'orders')}`;
+      summary = `${count(k.orders, 'orders', 'order', 'orders')} and {revenue} revenue${change(c.changes, 'revenue')}. Ad spend {spend}`
+        + (k.roas != null ? ', return on ad spend {roas}' : '')
+        + (k.costPerOrder != null ? ', {costPerOrder} per order' : '') + '.';
     }
-    if (k.cancelled) summary += ` ${c.client === 'clinic' ? count(k.cancelled, 'cancelled booking', 'cancelled bookings') : count(k.cancelled, 'refunded order', 'refunded orders')} not counted.`;
+    if (k.cancelled) summary += ` ${c.client === 'clinic' ? count(k.cancelled, 'cancelled', 'cancelled booking', 'cancelled bookings') : count(k.cancelled, 'cancelled', 'refunded order', 'refunded orders')} not counted.`;
     return {
       client: c.client,
-      headline: headline.slice(0, 90),
-      summary: summary.slice(0, 600),
-      warnings_explained: c.warnings.slice(0, 6).map(w => w.message.slice(0, 300)),
+      headline,
+      summary,
+      warnings_explained: c.warnings.slice(0, 6).map(w => `{${w.code}_message}`),
       next_steps: c.warnings.length ? ['Review the data warnings before this report goes to the client.'] : ['No action needed this week.'],
     };
   });
   const flagged = input.clients.filter(c => c.warnings.length).map(c => c.name);
   const overview = flagged.length ? `Data warnings to review for ${flagged.join(' and ')}.` : 'All data checks passed for both clients.';
-  return { overview: overview.slice(0, 200), clients };
+  return { overview, clients };
+}
+
+export function templateSummary(input) {
+  const r = validateAiOutput(templateDraft(input), input);
+  if (!r.ok) throw new Error(`template summary is broken: ${r.errors[0]}`); // a bug in this file, never the data
+  return r.value;
 }

@@ -19,7 +19,7 @@ export const PROBLEM_TEXT = {
   meta_mismatch: ['Meta and CRM don’t match', 'Some conversions never reach Meta'],
   bad_totals: ['Totals that don’t add up', 'Account total ≠ sum of its campaigns'],
   edge_cases: ['Edge cases', 'Empty week, cancelled booking, huge order, Arabic and emoji names, an event Meta rejects'],
-  ai_broken: ['AI gives a broken answer', 'Invented number, missing field: the template takes over'],
+  ai_broken: ['AI gives a broken answer', 'Refusal, typed number, missing field: the template takes over'],
 };
 const WARNING_FROM = { missing_source: 'missing_source', duplicates: 'duplicates', meta_mismatch: 'meta_mismatch', bad_totals: 'bad_totals', outlier: 'edge_cases', meta_rejected: 'edge_cases' };
 const STEPS = [['ghl', 'GoHighLevel leads'], ['spend', 'Ad spend'], ['meta', 'Meta conversions'], ['checks', 'Data checks'], ['ai', 'AI summary']];
@@ -44,7 +44,7 @@ export function stepView(steps = [], runStatus, report) {
     spend: clients.length ? `${usd(sum(clients, c => c.kpis?.spend))} (simulated)` : 'Done',
     meta: 'Conversions sent',
     checks: !report ? 'Done' : nWarn ? `${nWarn} warning${nWarn > 1 ? 's' : ''}` : 'All checks passed',
-    ai: report?.aiSource === 'template' ? 'Template used' : 'Written by Gemini, numbers checked',
+    ai: report?.aiSource === 'template' ? 'Template used' : 'Written by Gemini, numbers filled in by code',
   };
   return STEPS.map(([key, label]) => {
     const s = byKey[key] ?? { status: 'pending' };
