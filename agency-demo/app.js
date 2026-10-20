@@ -5,6 +5,7 @@ import { PROBLEMS } from './lib/scenario.js';
 import { generateLeads } from './lib/leads.js';
 import { buildMetaEvents } from './lib/meta.js';
 import { buildAiInput } from './lib/ai.js';
+import { alertText } from './lib/report.js';
 
 const API = 'https://agency-report-demo.onrender.com/webhook/demo';
 const FIRST_CALL_MS = 8000, WAKE_RETRY_MS = 5000, WAKE_MAX_MS = 120000, POLL_MS = 1500, RUN_MAX_MS = 180000;
@@ -137,6 +138,13 @@ function render(report) {
       h('h4', {}, 'Next steps'), h('ul', {}, s.next_steps.map(n => h('li', {}, n))));
   });
   out.push(h('div', { class: 'clients' }, cards));
+
+  // the same code and link the server uses for the Slack message, so this is the text that was posted
+  const alert = alertText(report, 'https://ibrahim-jaafar.github.io/agency-demo/');
+  out.push(h('div', { class: 'panel' }, h('h2', {}, 'Slack alert'),
+    alert ? [h('p', { class: 'hint' }, 'Posted to the agency’s Slack channel when the report was saved, so a person knows to look:'),
+      h('div', { class: 'slack-msg' }, h('b', {}, 'Agency report alerts'), h('span', { class: 'app' }, 'APP'), h('p', {}, alert.replace(':warning:', '⚠️')))]
+      : h('p', { class: 'hint' }, 'No alert this time: nothing needed a person, so Slack stayed quiet.')));
   $('#result').replaceChildren(...out);
   // the server builds the AI input from these same report fields with the same code
   $('#ai-in').textContent = JSON.stringify(buildAiInput(report.clients), null, 2);
