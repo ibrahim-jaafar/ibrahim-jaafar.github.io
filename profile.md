@@ -19,6 +19,8 @@ I turn complex operational problems into reliable AI systems, including workflow
 4. **Build:** I design the solution around how people already work, then build it and ship it to production.
 5. **Adopt:** I train the team on each tool, document it, and keep improving it from their feedback and support tickets.
 
+**n8n vs custom code.** I choose by the job. n8n is fastest for connecting services: credentials, retries, webhooks and schedules are built in, and non-developers can follow a visual workflow. Custom code gives more control, proper testing and version history, and is cheaper at large scale, but means more plumbing to build and maintain. Often the best answer is both: in my agency report demo, the business logic is plain JavaScript with unit tests, and a build step injects it into n8n, so n8n does the plumbing and tested code does the thinking.
+
 ## Current role: AI Specialist, Blue House Films (September 2026 – present, remote)
 
 Blue House Films is a film and social media company of about 100 people. I was hired to help the team work faster and more accurately with less repetitive work. I replaced scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks.
