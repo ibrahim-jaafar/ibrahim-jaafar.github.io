@@ -96,6 +96,81 @@ export function placeholderValues(c) {
   return out;
 }
 
+// What each number must be called near its placeholder (words), what it must not sit right after (not: another
+// number's label), and how the AI is shown to use it (example). Words are matched in lower case, inside the sentence.
+export const LABELS = {
+  spend: { words: ['spend', 'spent', 'budget'], not: ['return on', 'per '], example: 'ad spend was {spend}' },
+  leads: { words: ['lead', 'enquiry', 'enquiries'], not: ['per ', 'cost', 'rate'], example: '{leads} leads came in' },
+  paidLeads: { words: ['paid lead', 'from ads', 'from paid'], not: ['per ', 'cost'], example: '{paidLeads} paid leads' },
+  costPerLead: { words: ['per lead', 'per paid lead', 'each lead', 'each paid lead'], example: 'cost per paid lead was {costPerLead}' },
+  cancelled: { words: ['cancel', 'refund'], example: '{cancelled} cancelled bookings' },
+  bookings: { words: ['booking', 'booked', 'consultation', 'appointment'], not: ['per ', 'cost', 'rate'], example: '{bookings} booked consultations' },
+  costPerBooking: { words: ['per booking', 'each booking', 'per consultation', 'per appointment'], example: 'cost per booking was {costPerBooking}' },
+  bookingRate: { words: ['rate', 'of leads', 'of all leads'], example: 'a booking rate of {bookingRate}' },
+  orders: { words: ['order', 'purchase'], not: ['per ', 'cost', 'average', 'value'], example: '{orders} orders' },
+  revenue: { words: ['revenue', 'sales', 'income'], not: ['per ', 'average'], example: 'revenue was {revenue}' },
+  roas: { words: ['return on ad spend', 'roas'], example: 'return on ad spend was {roas}' },
+  costPerOrder: { words: ['per order', 'each order'], example: 'cost per order was {costPerOrder}' },
+  avgOrderValue: { words: ['average order', 'order value'], example: 'the average order was {avgOrderValue}' },
+};
+// counts of the checks' warnings, by warning code
+export const COUNT_LABELS = {
+  meta_mismatch: { words: ['meta', 'facebook'], example: 'Meta is missing {meta_mismatch_count} bookings' },
+  missing_source: { words: ['source', 'which ad', 'where they came', 'where it came'], example: '{missing_source_count} leads have no recorded source' },
+  duplicates: { words: ['twice', 'duplicate', 'same person', 'more than once'], example: '{duplicates_count} leads appear twice' },
+  bad_totals: { words: ['total'], example: '{bad_totals_count} total that does not add up' },
+  outlier: { words: ['order', 'large', 'unusual'], example: '{outlier_count} unusually large order' },
+  meta_rejected: { words: ['meta', 'facebook', 'reject', 'refuse', 'refused'], example: 'Meta rejected {meta_rejected_count} events' },
+};
+const labelOf = name => (name.endsWith('_message') ? null
+  : name.endsWith('_count') ? COUNT_LABELS[name.slice(0, -6)]
+  : LABELS[name.endsWith('_change') ? name.slice(0, -7) : name]);
+
+// The guide the AI gets, made from the same list the check uses, so the two can't disagree.
+export function placeholderGuide() {
+  const line = (name, l) => `{${name}}: next to "${l.words.join('" or "')}", e.g. "${l.example}"`;
+  return [
+    'Every placeholder needs its own label within a few words of it, in the same sentence, like these examples. A placeholder without its label nearby, or right after another number\'s label, makes the answer invalid.',
+    ...Object.entries(LABELS).map(([k, l]) => line(k, l)),
+    'A {name_change} placeholder needs the same label as {name}, e.g. "leads were {leads_change} on the previous report" or "cost per lead was {costPerLead_change} on the previous report".',
+    ...Object.entries(COUNT_LABELS).map(([k, l]) => line(`${k}_count`, l)),
+    'A {code_message} placeholder is the check\'s own sentence: put it on its own, e.g. "{duplicates_message}".',
+  ].join('\n');
+}
+
+const words = s => s.trim().split(/\s+/).filter(Boolean);
+const metric = name => name.replace(/_change$/, ''); // {spend} and {spend_change} share a label
+const has = (text, w) => new RegExp(`\\b${w}`).test(text); // whole words: "rate" is not in "generated" (label words are plain letters)
+const ALL_WORDS = Object.values(LABELS).flatMap(l => l.words);
+// Each placeholder looks at the words around it, back to the previous placeholder and on to the next one, within the sentence.
+// If its label isn't there, it may borrow it from a placeholder of the same number beside it, unless another number's
+// label sits right before it: "cost per lead was {costPerLead}, which is {costPerLead_change}" labels both, but
+// "cost per lead was {costPerLead} and cost per booking was {costPerLead_change}" is refused.
+function checkLabels(text, path, errors) {
+  const marks = [...text.matchAll(PLACEHOLDER)];
+  const strip = t => t.replace(PLACEHOLDER, ' ');
+  const around = (k, a, b) => { // the words before marks[k] (back to marks[a-1]) and after it (on to marks[b+1])
+    const m = marks[k], from = a ? marks[a - 1].index + marks[a - 1][0].length : 0, to = b < marks.length - 1 ? marks[b + 1].index : text.length;
+    const before = words(strip(text.slice(from, m.index)).split(/[.!?;]/).pop()), after = words(strip(text.slice(m.index + m[0].length, to)).split(/[.!?;]/)[0]);
+    return { near: [...before.slice(-10), ...after.slice(0, 8)].join(' ').toLowerCase(), right: before.slice(-5).join(' ').toLowerCase() };
+  };
+  marks.forEach((m, k) => {
+    const label = labelOf(m[1]);
+    if (!label) return; // unknown names are refused by fill()
+    const own = around(k, k, k);
+    let ok = label.words.some(w => has(own.near, w));
+    if (!ok) {
+      let a = k, b = k;
+      while (a > 0 && metric(marks[a - 1][1]) === metric(m[1])) a--;
+      while (b < marks.length - 1 && metric(marks[b + 1][1]) === metric(m[1])) b++;
+      const other = ALL_WORDS.filter(w => !label.words.includes(w));
+      ok = (a < k || b > k) && label.words.some(w => has(around(k, a, b).near, w)) && !other.some(w => has(own.right, w));
+    }
+    if (!ok) errors.push(`${path}: {${m[1]}} has no "${label.words[0]}" near it`);
+    else if ((label.not || []).some(w => has(own.right, w))) errors.push(`${path}: {${m[1]}} comes right after another number's label`);
+  });
+}
+
 const PLACEHOLDER = /\{(\w+)\}/g;
 // "rose {leads_change}" would read "rose down 33%": the change already says which way
 const DIRECTION_WORD = /\b(?:rose|rise|risen|rising|fell|fall|fallen|falling|increased?|increasing|decreased?|decreasing|grew|grow|grown|dropped|drop|declined?|up|down|higher|lower|gained?|lost)\s+(?:by\s+)?\{\w+_change\}/i;
@@ -104,6 +179,7 @@ const DIRECTION_WORD = /\b(?:rose|rise|risen|rising|fell|fall|fallen|falling|inc
 function fill(text, values, path, errors) {
   if (/\d/.test(text.replace(PLACEHOLDER, ''))) errors.push(`${path} types a number instead of using a placeholder`);
   if (DIRECTION_WORD.test(text)) errors.push(`${path} says up or down next to a change that already says it`);
+  checkLabels(text, path, errors);
   return text.replace(PLACEHOLDER, (m, name) => {
     if (!(name in values)) { errors.push(`${path} uses {${name}}, which has no value`); return m; }
     return values[name];
