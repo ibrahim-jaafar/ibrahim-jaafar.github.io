@@ -33,3 +33,17 @@ export function buildReport({ runId, weekStart, clients, steps, ai, problems, me
     })),
   };
 }
+
+const STEP_NAMES = { ghl: 'Reading the CRM (GoHighLevel)', spend: 'Ad spend', meta: 'Sending conversions to Meta', checks: 'Data checks', ai: 'AI summary' };
+
+// A short Slack message when a report needs a person: a step failed or a check fired. null when all is well.
+export function alertText(report, link) {
+  const lines = [
+    ...report.steps.filter(s => s.status === 'failed').map(s => `• ${STEP_NAMES[s.key] ?? s.key} failed: ${s.reason ?? 'no reason given'}`),
+    ...report.clients.flatMap(c => c.warnings.map(w => `• ${c.name}: ${w.message}`)),
+  ];
+  if (!lines.length) return null;
+  const week = report.weekStart.slice(0, 10);
+  const demo = report.injected.length ? ' (demo: the visitor chose some of these mistakes)' : '';
+  return [`:warning: Weekly report, week of ${week}, needs a look${demo}`, ...lines, `Report: ${link}`].join('\n');
+}
