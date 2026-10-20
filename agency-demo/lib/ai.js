@@ -110,6 +110,22 @@ function fill(text, values, path, errors) {
   });
 }
 
+// The first reply that passes the checks wins. `broken` is the demo's "AI gives a bad answer": every reply becomes a refusal.
+export function pickAiAnswer(replies, input, broken = false) {
+  const errors = [];
+  let gotAnswer = false;
+  for (const r of replies) {
+    let raw = r?.statusCode === 200 ? r.body?.choices?.[0]?.message?.content : null;
+    if (raw != null && broken) raw = "Sorry, I can't help with that.";
+    if (raw == null) { errors.push(`AI service answered ${r?.statusCode ?? 'nothing'}`); continue; }
+    gotAnswer = true;
+    const v = validateAiOutput(raw, input);
+    if (v.ok) return { value: v.value, gotAnswer, errors };
+    errors.push(...v.errors);
+  }
+  return { value: null, gotAnswer, errors };
+}
+
 export function validateAiOutput(raw, input) {
   let value = raw;
   if (typeof raw === 'string') {
