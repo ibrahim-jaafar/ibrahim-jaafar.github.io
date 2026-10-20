@@ -626,8 +626,8 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
       <li><b>Checks in code, not AI:</b> leads with no source, duplicates written differently (+961 vs 0, capital letters), Meta and CRM not matching, totals that don't add up, unusually large orders and events Meta rejects.</li>
       <li><b>Edge cases handled:</b> an empty week shows "no leads yet" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.</li>
       <li><b>Private by design:</b> the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.</li>
-      <li><b>AI kept honest:</b> it never types a number; it writes placeholders and the code fills in the real values. Its answer must also follow a strict JSON schema. A broken answer is refused and a template summary is used instead.</li>
-      <li><b>Live:</b> an n8n workflow on a free server saves the leads and deals in a GoHighLevel sandbox, sends the conversions to Meta's Conversions API and asks Gemini for the summary. The logic is covered by 103 automated tests.</li>
+      <li><b>AI kept honest:</b> it never types a number; it writes placeholders, each next to its own label, and the code fills in the real values. Its answer must also follow a strict JSON schema. A broken answer is refused and a template summary is used instead.</li>
+      <li><b>Live:</b> two n8n workflows on a free server: one plays the customers and saves them in a GoHighLevel sandbox; the other, the report a real client would get, reads them back, sends the conversions to Meta's Conversions API and asks Gemini for the summary. The logic is covered by 103 automated tests.</li>
     </ul>
     <p><a class="btn primary" href="agency-demo/">Try the demo →</a></p>
     <div class="shots"><img src="img/agency-demo.webp" alt="Agency report demo: workflow steps and client report cards" loading="lazy"></div>
