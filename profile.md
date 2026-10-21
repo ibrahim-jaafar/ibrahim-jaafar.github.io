@@ -205,6 +205,7 @@ Freelance project for a university professor researching how advertising differs
 
 - YOLO11, YOLO12 and YOLOv8 presets, including rotated boxes for billboards seen at an angle, with models downloaded on demand.
 - Exports straightened, full-resolution crops of every detection. Removing duplicates is left to the analysis step, by design.
+- An adjustable confidence threshold drops weak detections, so fewer false billboards end up in the export.
 - GPU hardware video decoding and TensorRT engines built from inside the app, for fast processing.
 - Speed, CPU, GPU and memory metrics for each stage, used to decide what to optimise next.
 - Tech: Python, PySide6, YOLO11/12/v8, TensorRT, FFmpeg/NVDEC, OpenCV

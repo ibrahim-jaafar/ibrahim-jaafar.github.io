@@ -205,11 +205,11 @@ button.btn{font:inherit;font-weight:600;cursor:pointer}
 .detail .close{position:sticky;top:14px;float:right;margin:14px 14px 0 0;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--glass-hi);color:var(--text);font-size:20px;cursor:pointer;z-index:1}
 .detail .close:hover{background:rgba(255,255,255,.12)}
 /* click a screenshot to view it full screen */
-.shots img{cursor:zoom-in}
+.shots img,.shots video{cursor:zoom-in}
 dialog.lightbox{max-width:none;max-height:none;width:100vw;height:100vh;margin:0;padding:24px;border:0;background:rgba(3,4,10,.92);display:none;align-items:center;justify-content:center;cursor:zoom-out}
 dialog.lightbox[open]{display:flex}
 dialog.lightbox::backdrop{background:transparent}
-dialog.lightbox img{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+dialog.lightbox img,dialog.lightbox video{max-width:100%;max-height:100%;border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
 footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var(--line)}
 @media (max-width:640px){
   .ba,.grid2{grid-template-columns:1fr}
@@ -844,13 +844,15 @@ dlg.querySelector('.close').addEventListener('click', () => dlg.close());
 // click any screenshot to see it full screen; click or Esc closes it
 const lb = document.createElement('dialog');
 lb.className = 'lightbox';
-lb.innerHTML = '<img alt="">';
+lb.innerHTML = '<img alt=""><video autoplay muted loop playsinline></video>';
 document.body.append(lb);
 document.addEventListener('click', e => {
-  const img = e.target.closest('.shots img');
+  const img = e.target.closest('.shots img, .shots video');
   if (!img) return;
-  lb.querySelector('img').src = img.src;
-  lb.querySelector('img').alt = img.alt;
+  const isVid = img.tagName === 'VIDEO';
+  const [big, vid] = [lb.querySelector('img'), lb.querySelector('video')];
+  big.hidden = isVid; vid.hidden = !isVid;
+  if (isVid) { vid.src = img.src; vid.play(); } else { big.src = img.src; big.alt = img.alt; vid.removeAttribute('src'); }
   lb.showModal();
 });
 lb.addEventListener('click', () => lb.close());
