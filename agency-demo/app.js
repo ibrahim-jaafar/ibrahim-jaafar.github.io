@@ -10,10 +10,6 @@ import { alertText } from './lib/report.js';
 const API = 'https://agency-report-demo.onrender.com/webhook/demo';
 const FIRST_CALL_MS = 8000, WAKE_RETRY_MS = 5000, WAKE_MAX_MS = 120000, POLL_MS = 1500, RUN_MAX_MS = 180000;
 
-const CLIENTS = [
-  { client: 'clinic', name: 'Lumière Skin Clinic', kind: 'Medical aesthetics clinic' },
-  { client: 'store', name: 'Northwind Home', kind: 'Online home-goods store' },
-];
 export const PROBLEM_TEXT = {
   missing_source: ['Leads with no source', 'The CRM lost which ad brought them'],
   duplicates: ['Duplicate leads', 'Same person, phone or email written differently'],
@@ -57,8 +53,14 @@ export function stageText(steps = [], runStatus, report, secs) {
   }
   const failed = STEPS.find(([key]) => byKey[key]?.status === 'failed');
   if (failed) return { cls: 'failed', text: `Done, but a step failed: ${failed[1]}${byKey[failed[0]].reason ? ` (${byKey[failed[0]].reason})` : ''}` };
-  const n = sum(report?.clients ?? [], c => c.warnings?.length);
   const took = secs ? ` in ${secs} s` : '';
+  // when the visitor broke the data on purpose, say how much of it the checks caught
+  const applied = (report?.injected ?? []).filter(i => i.caught !== null);
+  if (applied.length) {
+    const caught = applied.filter(i => i.caught).length;
+    return { cls: caught === applied.length ? 'done' : 'failed', text: `✓ Done${took} · ${caught} of ${plural(applied.length, 'mistake')} caught` };
+  }
+  const n = sum(report?.clients ?? [], c => c.warnings?.length);
   return n ? { cls: 'warn', text: `✓ Done${took} · ${plural(n, 'warning')}` } : { cls: 'done', text: `✓ Done${took} · all checks passed` };
 }
 
@@ -208,8 +210,7 @@ function dashboard(report, problems, week) {
   const show = i => {
     tabs.forEach((t, j) => t.setAttribute('aria-selected', String(i === j)));
     const c = report.clients[i];
-    const kind = CLIENTS.find(x => x.client === c.client)?.kind ?? '';
-    body.replaceChildren(h('p', { class: 'kind' }, `${kind} · arrows compare with the previous report`), ...dashBody(c, problems));
+    body.replaceChildren(...dashBody(c, problems));
   };
   tabs.forEach((t, i) => t.addEventListener('click', () => show(i)));
   show(0);

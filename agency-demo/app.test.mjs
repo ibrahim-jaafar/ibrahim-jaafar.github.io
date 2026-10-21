@@ -159,3 +159,17 @@ test('result strip says whether the checks caught what the visitor broke', () =>
   // "not applicable" doesn't count as missed
   assert.deepEqual(caughtSummary([{ problem: 'meta_mismatch', caught: null }, { problem: 'duplicates', caught: true }]), { cls: 'yes', text: 'You broke 2 things: all that applied were caught ✓' });
 });
+
+test('toolbar shows how many of the visitor’s mistakes were caught', () => {
+  const all = st([['ghl', 'done'], ['spend', 'done'], ['meta', 'done'], ['checks', 'done'], ['ai', 'done']]);
+  const rep = inj => ({ clients: [{ warnings: [{}, {}, {}] }], injected: inj });
+  assert.deepEqual(stageText(all, 'done', rep([{ problem: 'a', caught: true }, { problem: 'b', caught: true }, { problem: 'c', caught: true }]), 34),
+    { cls: 'done', text: '✓ Done in 34 s · 3 of 3 mistakes caught' });
+  assert.deepEqual(stageText(all, 'done', rep([{ problem: 'a', caught: true }, { problem: 'b', caught: false }])),
+    { cls: 'failed', text: '✓ Done · 1 of 2 mistakes caught' });
+  // not applicable is left out of the count
+  assert.deepEqual(stageText(all, 'done', rep([{ problem: 'a', caught: null }, { problem: 'b', caught: true }])),
+    { cls: 'done', text: '✓ Done · 1 of 1 mistake caught' });
+  // no mistakes chosen: warnings as before
+  assert.deepEqual(stageText(all, 'done', rep([])), { cls: 'warn', text: '✓ Done · 3 warnings' });
+});
