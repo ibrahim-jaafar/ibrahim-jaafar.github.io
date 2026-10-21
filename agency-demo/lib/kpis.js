@@ -8,6 +8,8 @@ export function computeKpis(client, leads, spend, weekStart) {
   const inWeek = leads.filter(l => inPeriod(l, weekStart));
   const total = cents(spend.campaigns.reduce((a, c) => a + c.spend, 0));
   const paidLeads = inWeek.filter(l => l.source !== 'organic').length;
+  const impressions = spend.campaigns.reduce((a, c) => a + (c.impressions || 0), 0);
+  const clicks = spend.campaigns.reduce((a, c) => a + (c.clicks || 0), 0);
   const conv = inWeek.filter(l => l.outcome === 'converted');
   const base = {
     spend: total,
@@ -15,6 +17,9 @@ export function computeKpis(client, leads, spend, weekStart) {
     paidLeads,
     costPerLead: ratio(total, paidLeads, cents),
     cancelled: inWeek.filter(l => l.outcome === 'cancelled').length,
+    impressions,
+    clicks,
+    costPerClick: ratio(total, clicks, cents),
   };
   if (client === 'clinic') {
     return {

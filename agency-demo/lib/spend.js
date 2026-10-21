@@ -10,7 +10,10 @@ export function simulateSpend(client, leads, problems, rng) {
     // leads with a lost source still came from some ad: spread them over the campaigns
     const billed = paidLeads + Math.floor(unknown / 3) + (i < unknown % 3 ? 1 : 0);
     const spend = roundCents(Math.max(1, billed) * (15 + rng() * 15));
-    return { name, spend, paidLeads };
+    // $0.60-$1.50 a click and a 1-3% click rate; $15+ per lead means 10+ clicks for each lead
+    const clicks = Math.round(spend / (0.6 + rng() * 0.9));
+    const impressions = Math.round(clicks / (0.01 + rng() * 0.02));
+    return { name, spend, paidLeads, impressions, clicks };
   });
   const total = roundCents(campaigns.reduce((a, c) => a + c.spend, 0));
   let reportedTotal = total;
