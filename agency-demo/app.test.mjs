@@ -247,3 +247,26 @@ test('chart points: one per day, or one per month for the year', () => {
   assert.equal(days[0].cpc, Math.round((d.spend / d.clicks) * 100) / 100);
   assert.equal(chartPoints([{ day: '2026-01-01', leads: 0, spend: 5, clicks: 0, revenue: 0 }], 'month')[0].cpc, null);
 });
+
+// ---------- review fixes ----------
+test('a change from 0 says "was 0", not "no earlier figure"', () => {
+  const v = dashboardView(clinic({ kpis: { ...clinic().kpis, bookings: 2 }, changes: { bookings: null, leads: null }, before: { bookings: 0 } }));
+  assert.equal(v.cards.find(c => c.key === 'bookings').change, 'was 0');
+  assert.equal(v.cards.find(c => c.key === 'leads').change, null);
+  const pv = periodView(rep, storeC(), 'day', '2026-10-21');
+  assert.ok(pv.before && typeof pv.before.spend === 'number');
+});
+
+test('the note is honest about made-up days', () => {
+  const old = storeC({ days: undefined });
+  assert.match(periodView(rep, old, 'month', '2026-10-21').note, /all days are made-up history \(this report has no daily figures\)/);
+  // every day of the period is real, but the comparison is made up
+  const june = { weekStart: '2026-06-01T00:00:00.000Z' };
+  const realJune = runDays('store', [], { campaigns: [{ name: 'A', spend: 70, paidLeads: 0, impressions: 7000, clicks: 70 }] }, new Date('2026-06-01T00:00:00Z'));
+  assert.match(periodView(june, storeC({ days: realJune }), 'month', '2026-06-08').note, /made-up history/);
+});
+
+test('toolbar shows the last step when every step is done but the run is still saving', () => {
+  const all = ['ghl', 'spend', 'meta', 'checks', 'ai'].map(key => ({ key, status: 'done' }));
+  assert.equal(stageText(all, 'running', null).text, 'Gemini is writing the summary… (5 of 5)');
+});

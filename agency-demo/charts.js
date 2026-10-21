@@ -101,8 +101,13 @@ export function chart({ title, points, series, kind = 'line', fmt = String, high
   svg.append(hair, ...dots, el('rect', { x: PAD.l, y: PAD.t, width: iw, height: ih, fill: 'transparent', class: 'hit' }));
   const tip = div('chart-tip');
   tip.hidden = true;
-  const wrap = div('chart-wrap', svg, tip);
+  // screen readers hear the hovered or focused point through this
+  const said = div('sr-only');
+  said.setAttribute('aria-live', 'polite');
+  const wrap = div('chart-wrap', svg, tip, said);
   wrap.tabIndex = 0;
+  wrap.setAttribute('role', 'group');
+  wrap.setAttribute('aria-label', `${title}. Use the left and right arrow keys to read each point.`);
   let at = -1;
   const show = i => {
     at = Math.max(0, Math.min(points.length - 1, i));
@@ -123,6 +128,7 @@ export function chart({ title, points, series, kind = 'line', fmt = String, high
       return row;
     }));
     tip.hidden = false;
+    said.textContent = `${p.label}: ${series.map(s => `${s.label} ${typeof p[s.key] === 'number' ? fmt(p[s.key]) : 'no figure'}`).join(', ')}`;
     const left = (x(at) / W) * 100;
     tip.style.left = `${left}%`;
     tip.style.transform = `translateX(${left > 60 ? '-105%' : '5%'})`;

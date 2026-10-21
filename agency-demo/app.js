@@ -46,7 +46,8 @@ export function stageText(steps = [], runStatus, report, secs) {
   if (!runStatus) return { cls: '', text: 'Pick the test data and press Run' };
   const byKey = Object.fromEntries(steps.map(s => [s.key, s]));
   if (runStatus === 'running') {
-    const i = Math.max(0, STEPS.findIndex(([key]) => byKey[key]?.status === 'running' || !byKey[key] || byKey[key].status === 'pending'));
+    const found = STEPS.findIndex(([key]) => byKey[key]?.status === 'running' || !byKey[key] || byKey[key].status === 'pending');
+    const i = found < 0 ? STEPS.length - 1 : found; // every step done: the report is being saved
     return { cls: 'running', text: `${RUNNING_TEXT[STEPS[i][0]]}… (${i + 1} of ${STEPS.length})` };
   }
   if (runStatus === 'failed') {
@@ -102,7 +103,8 @@ export function dashboardView(c) {
     const ch = c.changes?.[key] ?? null;
     const sense = SENSE[key] ?? 1;
     const tone = !ch || !sense ? 'neutral' : (ch > 0) === (sense > 0) ? 'good' : 'bad';
-    const change = ch === null ? null : `${ch > 0 ? '▲ ' : ch < 0 ? '▼ ' : ''}${Math.abs(ch)}%`;
+    // a percentage can't be worked out from 0, but the earlier figure exists: say so
+    const change = ch !== null ? `${ch > 0 ? '▲ ' : ch < 0 ? '▼ ' : ''}${Math.abs(ch)}%` : c.before?.[key] === 0 ? 'was 0' : null;
     return { key, label, value: fmt(k[key], type), change, tone, simulated: SIMULATED.includes(key) };
   });
   const steps = [['impressions', 'Impressions'], ['clicks', 'Clicks'], ['leads', 'Leads'], d.last];
@@ -150,22 +152,24 @@ export function periodView(report, c, period, today, now = new Date()) {
   const runRows = c.days ?? [];
   const kpisOf = rows => kpisFromTotals(c.client, sumDays(rows));
   if (period === 'week') {
-    return { kpis: c.kpis, changes: c.changes, rows: runRows, report: true, note: `Week of ${rangeText(weekStart, weekStart)} · compared with the previous report` };
+    return { kpis: c.kpis, changes: c.changes, before: c.previousKpis ?? null, rows: runRows, report: true, note: `Week of ${rangeText(weekStart, weekStart)} · compared with the previous report` };
   }
   if (period === 'live') {
-    const live = liveToday(c.client, now);
+    const live = liveToday(c.client, now, runRows);
     const asOf = new Date(now).toISOString().slice(11, 16);
     const kpis = kpisFromTotals(c.client, { ...live.totals, days: 1 });
     const before = kpisFromTotals(c.client, { ...live.lastWeek.totals, days: 1 });
     const weekday = WEEKDAYS[new Date(`${live.day}T00:00:00Z`).getUTCDay()];
-    return { kpis, changes: pctChanges(kpis, before), rows: [], report: false, live, note: `Today so far, as of ${asOf} UTC · provisional until the day closes · compared with the same time last ${weekday} · made-up live feed` };
+    return { kpis, changes: pctChanges(kpis, before), before, rows: [], report: false, live, note: `Today so far, as of ${asOf} UTC · provisional until the day closes · compared with the same time last ${weekday} · made-up live feed` };
   }
   const r = periodRange(period, today, weekStart);
   const rows = daySeries(c.client, period === 'day' ? addDays(r.to, -13) : r.from, r.to, runRows);
   const inPeriodRows = rows.filter(d => d.day >= r.from);
-  const kpis = kpisOf(inPeriodRows), before = kpisOf(daySeries(c.client, r.cmp.from, r.cmp.to, runRows));
-  const madeUp = rows.some(d => d.simulated) ? ' · days outside the run’s week are made-up history' : '';
-  return { kpis, changes: pctChanges(kpis, before), rows, report: false, highlight: period === 'day' ? r.to : undefined,
+  const cmpRows = daySeries(c.client, r.cmp.from, r.cmp.to, runRows);
+  const kpis = kpisOf(inPeriodRows), before = kpisOf(cmpRows);
+  const madeUp = !c.days ? ' · all days are made-up history (this report has no daily figures)'
+    : [...rows, ...cmpRows].some(d => d.simulated) ? ' · days outside the run’s week are made-up history' : '';
+  return { kpis, changes: pctChanges(kpis, before), before, rows, report: false, highlight: period === 'day' ? r.to : undefined,
     note: `${rangeText(r.from, r.to)} · compared with ${rangeText(r.cmp.from, r.cmp.to)}${madeUp}` };
 }
 
@@ -229,7 +233,7 @@ const LIGHT_TEXT = { green: 'All checks passed', orange: 'Check the warnings', r
 
 // One client's dashboard body for one period: cards, funnel, campaigns or chart, more charts, AI box, data health.
 const COLORS = { blue: '#2a78d6', orange: '#eb6834' }; // validated pair (dataviz reference palette, light)
-const money0 = v => (v >= 1000 ? `$${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : `$${Math.round(v)}`);
+const money0 = v => (v >= 1000 ? `$${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : v < 10 && v % 1 ? `$${v.toFixed(2)}` : `$${Math.round(v)}`);
 const money2 = v => `$${v.toFixed(2)}`;
 
 // wideFirst: the first chart sits in the wide box next to the funnel
@@ -238,7 +242,7 @@ function chartsFor(c, pv, period, wideFirst) {
   if (period === 'live') {
     // cumulative through the day, against the same hours a week ago
     const cumul = hrs => { let l = 0, s = 0, k = 0; return hrs.map(hr => ({ leads: (l += hr.leads), spend: Math.round((s += hr.spend) * 100) / 100, clicks: (k += hr.clicks) })); };
-    const now = cumul(pv.live.hours), before = cumul(liveToday(c.client, new Date(Date.parse(pv.live.asOf) - 7 * 864e5)).hours);
+    const now = cumul(pv.live.hours), before = cumul(pv.live.lastWeek.hours);
     const pts = pv.live.hours.map((hr, i) => ({ key: String(hr.hour), label: `${String(hr.hour).padStart(2, '0')}:00`,
       leads: now[i].leads, spend: now[i].spend, clicks: now[i].clicks, leadsLw: before[i]?.leads, spendLw: before[i]?.spend, clicksLw: before[i]?.clicks }));
     const two = (key, label) => [{ key, label: `${label} today`, color: COLORS.blue }, { key: `${key}Lw`, label: 'Same time last week', color: COLORS.orange }];
@@ -264,7 +268,7 @@ function chartsFor(c, pv, period, wideFirst) {
 
 function dashBody(c, problems, pv, period) {
   // the week keeps the run's campaigns, AI summary and data checks; other periods are added-up numbers
-  const v = dashboardView({ ...c, kpis: pv.kpis, changes: pv.changes, campaigns: pv.report ? c.campaigns : [] });
+  const v = dashboardView({ ...c, kpis: pv.kpis, changes: pv.changes, before: pv.before, campaigns: pv.report ? c.campaigns : [] });
   const sim = h('small', { class: 'sim' }, 'simulated');
   const funnel = h('div', { class: 'dbox' }, h('h4', {}, 'Funnel'),
     h('ol', { class: 'funnel' }, v.funnel.map((f, i) => h('li', { style: `--w:${100 - i * 16}%` },
@@ -308,7 +312,8 @@ const LIVE_MS = 30000;
 let liveTimer;
 
 function dashboard(report, problems) {
-  const body = h('div', { class: 'dbody' });
+  // aria-live off: the 30 s Live refresh must not make screen readers read the dashboard again
+  const body = h('div', { class: 'dbody', 'aria-live': 'off' });
   const state = { ci: 0, period: 'week' };
   const tabs = report.clients.map((c, i) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === 0) },
     h('i', { class: `ldot ${c.light}` }), c.name));
@@ -322,7 +327,11 @@ function dashboard(report, problems) {
     body.replaceChildren(...dashBody(c, problems, pv, state.period));
     clearInterval(liveTimer);
     // live numbers refresh every 30 s while Live is open
-    if (state.period === 'live') liveTimer = setInterval(() => { if (body.isConnected) draw(); else clearInterval(liveTimer); }, LIVE_MS);
+    // (skipped while someone is reading a chart, so focus and tooltips aren't lost)
+    if (state.period === 'live') liveTimer = setInterval(() => {
+      if (!body.isConnected) return clearInterval(liveTimer);
+      if (!body.contains(document.activeElement) && !body.querySelector('.chart-wrap:hover')) draw();
+    }, LIVE_MS);
   };
   tabs.forEach((t, i) => t.addEventListener('click', () => { state.ci = i; draw(); }));
   pbtns.forEach(b => b.addEventListener('click', () => { state.period = b.dataset.p; draw(); }));

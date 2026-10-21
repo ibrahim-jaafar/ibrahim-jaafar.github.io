@@ -154,16 +154,26 @@ function upTo(full, share) {
   return t;
 }
 
-// Today so far (provisional: the day isn't over), plus the same time a week ago to compare with.
-export function liveToday(client, now) {
-  const day = dayKey(now), full = historyDay(client, day);
-  const hoursNow = (now - Date.parse(`${day}T00:00:00Z`)) / 36e5;
-  const totals = upTo(full, shareBy(hoursNow));
+// The day's activity up to `hoursNow`, hour by hour.
+function hoursUpTo(full, hoursNow) {
   const hours = [];
   for (let hr = 0; hr <= Math.min(23, Math.floor(hoursNow)); hr++) {
     const a = upTo(full, shareBy(hr)), b = upTo(full, shareBy(Math.min(hoursNow, hr + 1)));
     hours.push({ hour: hr, ...Object.fromEntries(FIELDS.map(f => [f, f === 'spend' || f === 'revenue' ? dMoney(b[f] - a[f]) : b[f] - a[f]])) });
   }
-  const weekAgo = addDays(day, -7);
-  return { day, asOf: new Date(now).toISOString(), totals, hours, lastWeek: { day: weekAgo, totals: upTo(historyDay(client, weekAgo), shareBy(hoursNow)) } };
+  return hours;
+}
+
+// Today so far (provisional: the day isn't over), plus the same time a week ago to compare with.
+// runRows: the run's real days, used instead of made-up ones when "a week ago" is one of them.
+export function liveToday(client, now, runRows = []) {
+  const fullOf = d => runRows.find(r => r.day === d) ?? historyDay(client, d);
+  const day = dayKey(now), weekAgo = addDays(day, -7);
+  const hoursNow = (now - Date.parse(`${day}T00:00:00Z`)) / 36e5;
+  const full = fullOf(day), before = fullOf(weekAgo);
+  return {
+    day, asOf: new Date(now).toISOString(),
+    totals: upTo(full, shareBy(hoursNow)), hours: hoursUpTo(full, hoursNow),
+    lastWeek: { day: weekAgo, totals: upTo(before, shareBy(hoursNow)), hours: hoursUpTo(before, hoursNow) },
+  };
 }
