@@ -528,10 +528,11 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
     <ul>
       <li>YOLO11, YOLO12 and YOLOv8 presets, including rotated boxes for billboards seen at an angle, with models downloaded on demand.</li>
       <li>Exports straightened, full-resolution crops of every detection. Removing duplicates is left to the analysis step, by design.</li>
+      <li>An adjustable confidence threshold drops weak detections, so fewer false billboards end up in the export.</li>
       <li>GPU hardware video decoding and TensorRT engines built from inside the app, for fast processing.</li>
       <li>Speed, CPU, GPU and memory metrics for each stage, used to decide what to optimise next.</li>
     </ul>
-    <div class="shots"><video src="img/phonecam.mp4" poster="img/phonecam.webp" autoplay muted loop playsinline preload="metadata" aria-label="PhoneCam detecting billboards in dashcam video"></video></div>
+    <div class="shots"><video src="img/phonecam.mp4" poster="img/phonecam.webp" autoplay muted loop playsinline preload="metadata" aria-label="PhoneCam detecting billboards in dashcam video"></video><img src="img/phonecam-settings.webp" alt="PhoneCam advanced settings: decoder, GPU, TensorRT engine, confidence and export options" loading="lazy"></div>
   </div>
 
   <div class="grid2">
