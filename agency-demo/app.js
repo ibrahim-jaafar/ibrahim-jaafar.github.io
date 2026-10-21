@@ -24,10 +24,6 @@ export const PROBLEM_TEXT = {
 };
 const WARNING_FROM = { missing_source: 'missing_source', duplicates: 'duplicates', meta_mismatch: 'meta_mismatch', bad_totals: 'bad_totals', outlier: 'edge_cases', meta_rejected: 'edge_cases' };
 const STEPS = [['ghl', 'GoHighLevel leads'], ['spend', 'Ad spend'], ['meta', 'Meta conversions'], ['checks', 'Data checks'], ['ai', 'AI summary']];
-const KPI_TEXT = {
-  clinic: [['leads', 'Leads'], ['bookings', 'Booked consultations'], ['bookingRate', 'Lead-to-booking rate', 'pct'], ['spend', 'Ad spend', 'usd', 0], ['costPerLead', 'Cost per paid lead', 'usd', -1], ['costPerBooking', 'Cost per booking', 'usd', -1], ['cancelled', 'Cancelled', '', -1]],
-  store: [['orders', 'Orders'], ['revenue', 'Revenue', 'usd'], ['roas', 'Return on ad spend', 'x'], ['spend', 'Ad spend', 'usd', 0], ['costPerOrder', 'Cost per order', 'usd', -1], ['avgOrderValue', 'Average order', 'usd'], ['leads', 'Leads'], ['cancelled', 'Refunded', '', -1]],
-};
 
 const usd = n => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export const fmt = (v, type) => typeof v !== 'number' || !Number.isFinite(v) ? '—'
@@ -148,6 +144,55 @@ function showSteps(steps, runStatus, report) {
   $('#steps').replaceChildren(...items);
 }
 
+const LIGHT_TEXT = { green: 'All checks passed', orange: 'Check the warnings', red: 'A step failed' };
+
+// One client's dashboard body: cards, funnel, campaigns, AI box, data health.
+function dashBody(c, problems) {
+  const v = dashboardView(c);
+  const sim = h('small', { class: 'sim' }, 'simulated');
+  return [
+    h('div', { class: 'dcards' }, v.cards.map((x, i) => h('div', { class: `dcard c${i}` },
+      h('span', {}, x.label), h('b', {}, x.value),
+      h('div', { class: 'dmeta' }, h('em', { class: x.tone }, x.change ?? 'no earlier figure'), x.simulated ? sim.cloneNode(true) : null)))),
+    h('p', { class: 'extras' }, v.extras.map(e => h('span', {}, `${e.label}: `, h('b', {}, e.value)))),
+    h('div', { class: 'drow' },
+      h('div', { class: 'dbox' }, h('h4', {}, 'Funnel ', sim.cloneNode(true)),
+        h('ol', { class: 'funnel' }, v.funnel.map((f, i) => h('li', { style: `--w:${100 - i * 16}%` },
+          f.rate && f.rate !== '—' ? h('small', {}, `${f.rate} of the step above`) : null,
+          h('div', {}, h('b', {}, f.value), ` ${f.label}`))))),
+      h('div', { class: 'dbox' }, h('h4', {}, 'Campaigns: spend and paid leads'),
+        v.campaigns.length ? h('ul', { class: 'camps' }, v.campaigns.map(x => h('li', {},
+          h('span', { class: 'cname' }, x.name),
+          h('div', { class: 'cbar spend' }, h('i', { style: `width:${x.spendPct * 0.7}%` }), h('small', {}, x.spend)),
+          h('div', { class: 'cbar leads' }, h('i', { style: `width:${x.leadsPct * 0.7}%` }), h('small', {}, `${x.leads} ${x.leads === '1' ? 'lead' : 'leads'}`)))))
+          : h('p', { class: 'hint' }, 'This older report has no campaign breakdown. Run the report to see it.'))),
+    h('div', { class: 'drow' },
+      h('div', { class: 'dbox ai' }, h('h4', {}, 'What happened this week'),
+        v.ai.headline ? h('p', { class: 'headline' }, v.ai.headline) : null,
+        v.ai.summary ? h('p', {}, v.ai.summary) : null,
+        v.ai.nextSteps.length ? [h('h4', {}, 'Next steps'), h('ul', {}, v.ai.nextSteps.map(n => h('li', {}, n)))] : null),
+      h('div', { class: 'dbox' }, h('h4', {}, 'Data health'),
+        h('span', { class: `light ${v.light}` }, h('i'), LIGHT_TEXT[v.light] ?? ''),
+        v.warnings.length ? h('ul', {}, v.warnings.map(w => h('li', {}, w.message,
+          problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null))) : null)),
+  ];
+}
+
+function dashboard(report, problems) {
+  const body = h('div', { class: 'dbody' });
+  const tabs = report.clients.map((c, i) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === 0) },
+    h('i', { class: `ldot ${c.light}` }), c.name));
+  const show = i => {
+    tabs.forEach((t, j) => t.setAttribute('aria-selected', String(i === j)));
+    const c = report.clients[i];
+    const kind = CLIENTS.find(x => x.client === c.client)?.kind ?? '';
+    body.replaceChildren(h('p', { class: 'kind' }, `${kind} · arrows compare with the previous report`), ...dashBody(c, problems));
+  };
+  tabs.forEach((t, i) => t.addEventListener('click', () => show(i)));
+  show(0);
+  return h('div', { class: 'dash' }, h('div', { class: 'dhead' }, h('h3', {}, 'Client dashboard'), h('div', { role: 'tablist', class: 'dtabs' }, tabs)), body);
+}
+
 function render(report) {
   const problems = report.injected.map(i => i.problem);
   const week = new Date(report.weekStart).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
@@ -165,27 +210,7 @@ function render(report) {
     out.push(h('p', { class: 'note' }, 'No mistakes were put in the data this run, so every light should be green.'));
   }
 
-  const lightText = { green: 'All checks passed', orange: 'Check the warnings', red: 'A step failed' };
-  const cards = report.clients.map(c => {
-    const info = CLIENTS.find(x => x.client === c.client) ?? { kind: '' };
-    const s = c.summary;
-    const kpis = (KPI_TEXT[c.client] ?? []).map(([key, label, type, sense = 1]) => {
-      const ch = c.changes?.[key];
-      const dir = ch == null || ch === 0 || sense === 0 ? 'flat' : (ch > 0) === (sense > 0) ? 'up' : 'down';
-      return h('div', { class: 'kpi' }, h('span', {}, label), h('b', {}, fmt(c.kpis?.[key], type)),
-        ch != null ? h('em', { class: dir }, `${ch > 0 ? '▲' : ch < 0 ? '▼' : ''} ${Math.abs(ch)}% vs previous run`) : null);
-    });
-    return h('article', { class: 'panel client' },
-      h('header', {}, h('div', {}, h('h3', {}, c.name), h('span', { class: 'kind' }, info.kind)),
-        h('span', { class: `light ${c.light}` }, h('i'), lightText[c.light] ?? '')),
-      h('p', { class: 'headline' }, s.headline),
-      h('div', { class: 'kpis' }, kpis),
-      h('p', {}, s.summary),
-      c.warnings.length ? [h('h4', {}, 'Warnings'), h('ul', {}, c.warnings.map(w => h('li', {}, w.message,
-        problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null)))] : null,
-      h('h4', {}, 'Next steps'), h('ul', {}, s.next_steps.map(n => h('li', {}, n))));
-  });
-  out.push(h('div', { class: 'clients' }, cards));
+  out.push(dashboard(report, problems));
 
   // the same code and link the server uses for the Slack message, so this is the text that was posted
   const alert = alertText(report, 'https://ibrahim-jaafar.github.io/agency-demo/');
