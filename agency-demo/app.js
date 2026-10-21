@@ -24,12 +24,53 @@ export const PROBLEM_TEXT = {
 };
 const WARNING_FROM = { missing_source: 'missing_source', duplicates: 'duplicates', meta_mismatch: 'meta_mismatch', bad_totals: 'bad_totals', outlier: 'edge_cases', meta_rejected: 'edge_cases' };
 const STEPS = [['ghl', 'GoHighLevel leads'], ['spend', 'Ad spend'], ['meta', 'Meta conversions'], ['checks', 'Data checks'], ['ai', 'AI summary']];
+// for the "How it works" popup
+const STEP_INFO = {
+  ghl: 'The made-up leads and deals are saved in a GoHighLevel sandbox (one sub-account per client), then read back the way a real client’s report would read them.',
+  spend: 'The week’s ad spend, impressions and clicks per campaign. Simulated: real numbers only exist when real ads run.',
+  meta: 'Bookings and orders are sent to Meta’s Conversions API, with personal fields SHA-256 hashed.',
+  checks: 'Plain code checks the data: duplicates, missing sources, totals that don’t add up, Meta and CRM not matching, unusual orders, events Meta rejects.',
+  ai: 'Gemini writes the summary with placeholders instead of numbers; code fills in every figure. A broken answer is refused and a template is used.',
+};
 
 const usd = n => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export const fmt = (v, type) => typeof v !== 'number' || !Number.isFinite(v) ? '—'
   : type === 'usd' ? usd(v) : type === 'pct' ? `${Math.round(v * 1000) / 10}%` : type === 'x' ? `${v}×` : type === 'n' ? v.toLocaleString('en-US') : String(v);
 
 const sum = (xs, f) => xs.reduce((a, x) => a + (f(x) || 0), 0);
+
+// ---------- toolbar ----------
+const RUNNING_TEXT = { ghl: 'Saving the leads in GoHighLevel', spend: 'Adding up the ad spend', meta: 'Sending conversions to Meta', checks: 'Checking the data', ai: 'Gemini is writing the summary' };
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+// The toolbar's one-line status: only the current stage while running, a summary when done.
+export function stageText(steps = [], runStatus, report, secs) {
+  if (!runStatus) return { cls: '', text: 'Pick the test data and press Run' };
+  const byKey = Object.fromEntries(steps.map(s => [s.key, s]));
+  if (runStatus === 'running') {
+    const i = Math.max(0, STEPS.findIndex(([key]) => byKey[key]?.status === 'running' || !byKey[key] || byKey[key].status === 'pending'));
+    return { cls: 'running', text: `${RUNNING_TEXT[STEPS[i][0]]}… (${i + 1} of ${STEPS.length})` };
+  }
+  if (runStatus === 'failed') {
+    const at = STEPS.find(([key]) => ['running', 'pending', 'failed'].includes(byKey[key]?.status ?? 'pending'));
+    return { cls: 'failed', text: `The run hit an error and stopped at: ${at ? at[1] : 'the end'}` };
+  }
+  const failed = STEPS.find(([key]) => byKey[key]?.status === 'failed');
+  if (failed) return { cls: 'failed', text: `Done, but a step failed: ${failed[1]}${byKey[failed[0]].reason ? ` (${byKey[failed[0]].reason})` : ''}` };
+  const n = sum(report?.clients ?? [], c => c.warnings?.length);
+  const took = secs ? ` in ${secs} s` : '';
+  return n ? { cls: 'warn', text: `✓ Done${took} · ${plural(n, 'warning')}` } : { cls: 'done', text: `✓ Done${took} · all checks passed` };
+}
+
+// The result strip: did the checks catch what the visitor broke? null when nothing was broken.
+export function caughtSummary(injected = []) {
+  if (!injected.length) return null;
+  const caught = injected.filter(i => i.caught === true).length, missed = injected.filter(i => i.caught === false).length;
+  const head = `You broke ${plural(injected.length, 'thing')}: `;
+  if (missed) return { cls: 'no', text: `${head}${caught} caught, ${missed} missed` };
+  if (caught < injected.length) return { cls: 'yes', text: `${head}all that applied were caught ✓` };
+  return { cls: 'yes', text: `${head}${injected.length === 1 ? 'caught' : injected.length === 2 ? 'both caught' : 'all caught'} ✓` };
+}
 
 // ---------- dashboard ----------
 // [kpi key, label, format]. Cards are the six big numbers; extras are every other number, so none disappear.
@@ -83,30 +124,6 @@ export function dashboardView(c) {
   };
 }
 
-// What each step chip shows. A failed run never finishes its open steps, so they read "Stopped".
-export function stepView(steps = [], runStatus, report) {
-  const byKey = Object.fromEntries(steps.map(s => [s.key, s]));
-  const clients = report?.clients ?? [];
-  const nWarn = sum(clients, c => c.warnings?.length);
-  const doneNote = {
-    ghl: clients.length ? `${sum(clients, c => c.kpis?.leads)} leads saved in 2 sub-accounts` : 'Done',
-    spend: clients.length ? `${usd(sum(clients, c => c.kpis?.spend))} (simulated)` : 'Done',
-    meta: 'Conversions sent',
-    checks: !report ? 'Done' : nWarn ? `${nWarn} warning${nWarn > 1 ? 's' : ''}` : 'All checks passed',
-    ai: report?.aiSource === 'template' ? 'Template used' : 'Written by Gemini, numbers filled in by code',
-  };
-  return STEPS.map(([key, label]) => {
-    const s = byKey[key] ?? { status: 'pending' };
-    const open = s.status === 'running' || s.status === 'pending';
-    if (open && runStatus === 'failed') return { key, label, cls: 'stopped', note: 'Stopped: the run hit an error' };
-    if (s.status === 'running') return { key, label, cls: 'running', note: 'Working…' };
-    if (s.status === 'pending') return { key, label, cls: '', note: 'Waiting' };
-    if (s.status === 'failed') return { key, label, cls: 'failed', note: s.reason || 'Failed' };
-    if (s.status === 'warning') return { key, label, cls: 'warn', note: s.reason || 'Done with a warning' };
-    return { key, label, cls: key === 'checks' && nWarn ? 'warn' : 'done', note: doneNote[key] };
-  });
-}
-
 export function noticeText(kind, info = {}) {
   if (kind === 'waking') return 'Waking up the demo server. It sleeps when nobody uses it, so this can take up to a minute…';
   if (kind === 'unavailable') return 'The demo server isn’t answering right now. Please try again later.' + (info.hasReport ? ' The last report is shown below.' : '');
@@ -136,16 +153,17 @@ async function call(path, opts = {}, ms = FIRST_CALL_MS) {
   return { status: r.status, body: await r.json().catch(() => null) };
 }
 
-function notice(kind, info) {
-  const el = $('#notice');
-  el.textContent = kind ? noticeText(kind, info) : '';
-  el.hidden = !kind;
+// The toolbar's status line shows either the run's stage or a notice (waking, limit, error).
+function setStage({ cls, text }) {
+  const el = $('#stage');
+  el.className = `stage ${cls}`;
+  el.querySelector('span').textContent = text;
 }
-
-function showSteps(steps, runStatus, report) {
-  const items = stepView(steps, runStatus, report).map(v =>
-    h('li', { class: `chip ${v.cls}` }, h('b', {}, h('i', { class: 'dot' }), v.label), h('small', {}, v.note)));
-  $('#steps').replaceChildren(...items);
+function notice(kind, info) {
+  if (kind) setStage({ cls: kind === 'waking' || kind === 'joined' ? 'running' : 'failed', text: noticeText(kind, info) });
+}
+function showStage(steps, runStatus, report, secs) {
+  setStage(stageText(steps, runStatus, report, secs));
 }
 
 const LIGHT_TEXT = { green: 'All checks passed', orange: 'Check the warnings', red: 'A step failed' };
@@ -201,28 +219,25 @@ function dashboard(report, problems) {
 function render(report) {
   const problems = report.injected.map(i => i.problem);
   const week = new Date(report.weekStart).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-  const head = h('div', { class: 'panel' }, h('h2', {}, `3. The report · week of ${week}`), h('p', { class: 'overview' }, report.overview));
-  if (report.aiSource === 'template') head.append(h('p', { class: 'partial' }, 'This summary was written by the template: the AI’s answer failed the checks, or the AI didn’t answer.'));
-  if (report.partial) head.append(h('p', { class: 'partial' }, 'Partial report: a step failed, so part of it was built without that step. See the workflow above.'));
+  const head = h('div', { class: 'rhead' }, h('p', {}, h('b', {}, `Week of ${week}`), ` · ${report.overview}`),
+    report.aiSource === 'template' ? h('p', { class: 'partial' }, 'The summary was written by the template: the AI’s answer failed the checks, or the AI didn’t answer.') : null,
+    report.partial ? h('p', { class: 'partial' }, 'Partial report: a step failed, so part of it was built without that step.') : null);
   const out = [head];
 
-  if (report.injected.length) {
-    const list = h('ul', { class: 'caught' }, report.injected.map(i => h('li', {}, h('span', {}, PROBLEM_TEXT[i.problem]?.[0] ?? i.problem),
+  const cs = caughtSummary(report.injected);
+  if (cs) out.push(h('details', { class: `strip ${cs.cls}` }, h('summary', {}, cs.text),
+    h('ul', { class: 'caught' }, report.injected.map(i => h('li', {}, h('span', {}, PROBLEM_TEXT[i.problem]?.[0] ?? i.problem),
       i.caught === null ? h('span', { class: 'tag na' }, 'Not applicable: no conversions to hold back')
-        : h('span', { class: `tag ${i.caught ? 'yes' : 'no'}` }, i.caught ? 'Caught' : 'Missed'))));
-    out.push(h('div', { class: 'panel' }, h('h2', {}, 'Did the checks catch the mistakes?'), list));
-  } else {
-    out.push(h('p', { class: 'note' }, 'No mistakes were put in the data this run, so every light should be green.'));
-  }
+        : h('span', { class: `tag ${i.caught ? 'yes' : 'no'}` }, i.caught ? 'Caught' : 'Missed'))))));
 
   out.push(dashboard(report, problems));
 
   // the same code and link the server uses for the Slack message, so this is the text that was posted
   const alert = alertText(report, 'https://ibrahim-jaafar.github.io/agency-demo/');
-  out.push(h('div', { class: 'panel' }, h('h2', {}, 'Slack alert'),
-    alert ? [h('p', { class: 'hint' }, 'Posted to the agency’s Slack channel when the report was saved, so a person knows to look:'),
-      h('div', { class: 'slack-msg' }, h('b', {}, 'Agency report alerts'), h('span', { class: 'app' }, 'APP'), h('p', {}, alert.replace(':warning:', '⚠️')))]
-      : h('p', { class: 'hint' }, 'No alert this time: nothing needed a person, so Slack stayed quiet.')));
+  out.push(alert
+    ? h('details', { class: 'slackline' }, h('summary', {}, '🔔 Alert sent to Slack'),
+      h('div', { class: 'slack-msg' }, h('b', {}, 'Agency report alerts'), h('span', { class: 'app' }, 'APP'), h('p', {}, alert.replace(':warning:', '⚠️'))))
+    : h('p', { class: 'slackline quiet' }, '🔕 Slack stayed quiet: nothing needed a person.'));
   $('#result').replaceChildren(...out);
   // the server builds the AI input from these same report fields with the same code
   $('#ai-in').textContent = JSON.stringify(buildAiInput(report.clients), null, 2);
@@ -244,18 +259,17 @@ async function showMetaExample() {
 }
 
 function scenario() {
-  const mode = document.querySelector('input[name=mode]:checked').value;
+  const mode = $('#mode').value;
   return { mode, problems: mode === 'custom' ? [...$('#problems').querySelectorAll('input:checked')].map(i => i.value) : [] };
 }
 
-// Follow a run until it ends, redrawing the steps on every poll.
-async function follow(runId) {
-  const t0 = Date.now();
+// Follow a run until it ends, updating the toolbar's stage on every poll.
+async function follow(runId, t0 = Date.now()) {
   while (Date.now() - t0 < RUN_MAX_MS) {
     const s = await call(`/status?run=${encodeURIComponent(runId)}`).then(r => r.body, () => null);
     if (s?.runId === runId) {
-      showSteps(s.steps, s.status, s.report);
-      if (s.status === 'failed') return notice('failed');
+      showStage(s.steps, s.status, s.report, s.status === 'running' ? null : Math.round((Date.now() - t0) / 1000));
+      if (s.status === 'failed') return;
       if (s.status !== 'running') { if (s.report) render(s.report); return; }
     }
     await sleep(POLL_MS);
@@ -263,19 +277,51 @@ async function follow(runId) {
   notice('failed', { timeout: true });
 }
 
+// "How it works": opens by itself on the first visit; afterwards the floating ? button reopens it.
+const SEEN_KEY = 'agency-demo-how-seen';
+function howItWorks() {
+  const dlg = $('#how'), help = $('#help');
+  $('#how-steps').replaceChildren(...STEPS.map(([key, label]) => h('li', {}, h('b', {}, label), ' ', STEP_INFO[key])));
+  $('#how-problems').replaceChildren(...PROBLEMS.map(p => h('li', {}, h('b', {}, PROBLEM_TEXT[p][0]), `: ${PROBLEM_TEXT[p][1]}`)));
+  const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const close = () => {
+    if (!dlg.open || dlg.classList.contains('leaving')) return;
+    try { localStorage.setItem(SEEN_KEY, '1'); } catch {}
+    const done = () => {
+      dlg.classList.remove('leaving');
+      dlg.close();
+      help.hidden = false;
+      // ping with its label for a few seconds, then settle into a soft glow
+      help.classList.add('ping');
+      setTimeout(() => help.classList.remove('ping'), 6000);
+    };
+    if (calm) return done();
+    dlg.classList.add('leaving'); // shrinks towards the ? button
+    setTimeout(done, 350);
+  };
+  dlg.addEventListener('cancel', e => { e.preventDefault(); close(); });
+  dlg.addEventListener('click', e => { if (e.target === dlg) close(); });
+  dlg.querySelector('.close').addEventListener('click', close);
+  $('#how-go').addEventListener('click', () => { close(); $('#run').focus(); });
+  help.addEventListener('click', () => { help.classList.remove('ping'); dlg.showModal(); dlg.scrollTop = 0; });
+  let seen = false;
+  try { seen = localStorage.getItem(SEEN_KEY) === '1'; } catch {}
+  if (seen) help.hidden = false; else dlg.showModal();
+}
+
 export async function boot() {
-  const btn = $('#run'), box = $('#problems');
+  const btn = $('#run'), box = $('#problems'), mode = $('#mode');
   for (const p of PROBLEMS) {
     box.append(h('label', {}, h('input', { type: 'checkbox', value: p }), h('span', {}, PROBLEM_TEXT[p][0], h('small', {}, PROBLEM_TEXT[p][1]))));
   }
-  document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', () => { box.hidden = !$('#m-custom').checked; }));
-  showSteps([], null, null);
+  mode.addEventListener('change', () => { box.hidden = mode.value !== 'custom'; });
+  showStage([], null, null);
+  howItWorks();
   showMetaExample().catch(console.error);
 
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.textContent = 'Running…';
-    notice(null);
     try {
       const body = JSON.stringify(scenario());
       // the server is already awake (the page woke it on load), so one call with a long timeout, never a retry that could start a second run
@@ -285,10 +331,10 @@ export async function boot() {
       } else if (r.status !== 200 || !r.body?.runId) {
         notice('unavailable', { hasReport: !!$('#result').children.length });
       } else {
-        if (r.body.joined) notice('joined');
-        showSteps([{ key: 'ghl', status: 'running' }], 'running', null);
-        $('#t-steps').scrollIntoView({ behavior: 'smooth', block: 'start' });
-        await follow(r.body.runId);
+        const t0 = Date.now();
+        if (r.body.joined) { notice('joined'); await sleep(2500); }
+        showStage([{ key: 'ghl', status: 'running' }], 'running', null);
+        await follow(r.body.runId, t0);
       }
     } catch (err) {
       console.error(err);
@@ -306,8 +352,8 @@ export async function boot() {
   for (;;) {
     const r = await call('/status').catch(() => null);
     if (r?.status === 200) {
-      notice(null);
-      if (r.body?.report) { showSteps(r.body.steps, r.body.status, r.body.report); render(r.body.report); }
+      showStage(r.body?.steps ?? [], r.body?.report ? r.body.status : null, r.body?.report);
+      if (r.body?.report) render(r.body.report);
       btn.disabled = false;
       btn.textContent = 'Run the report';
       return;

@@ -1,7 +1,7 @@
 // node --test agency-demo/app.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fmt, stepView, noticeText } from './app.js';
+import { fmt, noticeText } from './app.js';
 
 test('null and zero-division values render as a dash', () => {
   assert.equal(fmt(null, 'usd'), '—');
@@ -9,31 +9,6 @@ test('null and zero-division values render as a dash', () => {
   assert.equal(fmt(NaN, ''), '—');
   assert.equal(fmt(159.4, 'usd'), '$159.40');
   assert.equal(fmt(0.5833, 'pct'), '58.3%');
-});
-
-test('failed step shows its reason', () => {
-  const meta = stepView([{ key: 'meta', status: 'failed', reason: "Meta didn't respond" }], 'partial', null).find(s => s.key === 'meta');
-  assert.equal(meta.cls, 'failed');
-  assert.equal(meta.note, "Meta didn't respond");
-});
-
-test('a failed run shows its unfinished steps as stopped', () => {
-  const v = stepView([{ key: 'ghl', status: 'done' }, { key: 'spend', status: 'running' }, { key: 'meta', status: 'pending' }], 'failed', null);
-  assert.deepEqual(v.map(s => s.cls), ['done', 'stopped', 'stopped', 'stopped', 'stopped']);
-});
-
-test('a running run keeps its open steps open', () => {
-  const v = stepView([{ key: 'ghl', status: 'done' }, { key: 'spend', status: 'running' }], 'running', null);
-  assert.deepEqual(v.map(s => s.cls), ['done', 'running', '', '', '']);
-});
-
-test('done steps describe the report, and warnings colour the checks step', () => {
-  const report = { aiSource: 'template', clients: [{ kpis: { leads: 12, spend: 100 }, warnings: [{}] }, { kpis: { leads: 9, spend: 50.5 }, warnings: [] }] };
-  const v = Object.fromEntries(stepView(['ghl', 'spend', 'meta', 'checks', 'ai'].map(key => ({ key, status: 'done' })), 'done', report).map(s => [s.key, s]));
-  assert.equal(v.ghl.note, '21 leads saved in 2 sub-accounts');
-  assert.equal(v.spend.note, '$150.50 (simulated)');
-  assert.equal(v.checks.cls, 'warn');
-  assert.match(v.ai.note, /template/i);
 });
 
 test('notices', () => {
@@ -145,4 +120,42 @@ test('paid leads with no recorded source are counted outside the campaign bars',
 
 test('only impressions and clicks are marked simulated in the funnel', () => {
   assert.deepEqual(dashboardView(clinic()).funnel.map(s => s.simulated), [true, true, false, false]);
+});
+
+// ---------- toolbar ----------
+import { stageText, caughtSummary } from './app.js';
+
+const st = (pairs) => pairs.map(([key, status, reason]) => (reason ? { key, status, reason } : { key, status }));
+
+test('toolbar shows only the current stage while running', () => {
+  assert.deepEqual(stageText(st([['ghl', 'done'], ['spend', 'done'], ['meta', 'running']]), 'running', null),
+    { cls: 'running', text: 'Sending conversions to Meta… (3 of 5)' });
+  assert.deepEqual(stageText([], 'running', null), { cls: 'running', text: 'Saving the leads in GoHighLevel… (1 of 5)' });
+});
+
+test('toolbar sums up a finished run', () => {
+  const rep = { clients: [{ warnings: [{}, {}] }, { warnings: [] }] };
+  const all = st([['ghl', 'done'], ['spend', 'done'], ['meta', 'done'], ['checks', 'done'], ['ai', 'done']]);
+  assert.deepEqual(stageText(all, 'done', rep, 34), { cls: 'warn', text: '✓ Done in 34 s · 2 warnings' });
+  assert.deepEqual(stageText(all, 'done', { clients: [{ warnings: [] }] }), { cls: 'done', text: '✓ Done · all checks passed' });
+  assert.deepEqual(stageText(all, 'done', { clients: [{ warnings: [{}] }] }), { cls: 'warn', text: '✓ Done · 1 warning' });
+});
+
+test('toolbar names the step that failed', () => {
+  const s = st([['ghl', 'done'], ['spend', 'done'], ['meta', 'failed', "Meta didn't respond"]]);
+  assert.deepEqual(stageText(s, 'partial', { clients: [] }), { cls: 'failed', text: "Done, but a step failed: Meta conversions (Meta didn't respond)" });
+  assert.deepEqual(stageText(st([['ghl', 'running']]), 'failed', null), { cls: 'failed', text: 'The run hit an error and stopped at: GoHighLevel leads' });
+});
+
+test('toolbar before any run', () => {
+  assert.deepEqual(stageText([], null, null), { cls: '', text: 'Pick the test data and press Run' });
+});
+
+test('result strip says whether the checks caught what the visitor broke', () => {
+  assert.equal(caughtSummary([]), null);
+  assert.deepEqual(caughtSummary([{ problem: 'duplicates', caught: true }, { problem: 'bad_totals', caught: true }]), { cls: 'yes', text: 'You broke 2 things: both caught ✓' });
+  assert.deepEqual(caughtSummary([{ problem: 'duplicates', caught: true }]), { cls: 'yes', text: 'You broke 1 thing: caught ✓' });
+  assert.deepEqual(caughtSummary([{ problem: 'duplicates', caught: true }, { problem: 'edge_cases', caught: false }, { problem: 'missing_source', caught: true }]), { cls: 'no', text: 'You broke 3 things: 2 caught, 1 missed' });
+  // "not applicable" doesn't count as missed
+  assert.deepEqual(caughtSummary([{ problem: 'meta_mismatch', caught: null }, { problem: 'duplicates', caught: true }]), { cls: 'yes', text: 'You broke 2 things: all that applied were caught ✓' });
 });
