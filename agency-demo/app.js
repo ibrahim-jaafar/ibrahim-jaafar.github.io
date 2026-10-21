@@ -284,16 +284,21 @@ function howItWorks() {
   $('#how-steps').replaceChildren(...STEPS.map(([key, label]) => h('li', {}, h('b', {}, label), ' ', STEP_INFO[key])));
   $('#how-problems').replaceChildren(...PROBLEMS.map(p => h('li', {}, h('b', {}, PROBLEM_TEXT[p][0]), `: ${PROBLEM_TEXT[p][1]}`)));
   const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // the ? pings with its label when it appears, then briefly every 25 s until it has been clicked once
+  let pingTimer, repeat, clicked = false;
+  const ping = ms => { help.classList.add('ping'); clearTimeout(pingTimer); pingTimer = setTimeout(() => help.classList.remove('ping'), ms); };
+  const showHelp = () => {
+    help.hidden = false;
+    ping(6000);
+    if (!clicked && !repeat) repeat = setInterval(() => ping(3000), 25000);
+  };
   const close = () => {
     if (!dlg.open || dlg.classList.contains('leaving')) return;
     try { localStorage.setItem(SEEN_KEY, '1'); } catch {}
     const done = () => {
       dlg.classList.remove('leaving');
       dlg.close();
-      help.hidden = false;
-      // ping with its label for a few seconds, then settle into a soft glow
-      help.classList.add('ping');
-      setTimeout(() => help.classList.remove('ping'), 6000);
+      showHelp();
     };
     if (calm) return done();
     dlg.classList.add('leaving'); // shrinks towards the ? button
@@ -303,10 +308,16 @@ function howItWorks() {
   dlg.addEventListener('click', e => { if (e.target === dlg) close(); });
   dlg.querySelector('.close').addEventListener('click', close);
   $('#how-go').addEventListener('click', () => { close(); $('#run').focus(); });
-  help.addEventListener('click', () => { help.classList.remove('ping'); dlg.showModal(); dlg.scrollTop = 0; });
+  help.addEventListener('click', () => {
+    clicked = true;
+    clearInterval(repeat);
+    help.classList.remove('ping');
+    dlg.showModal();
+    dlg.scrollTop = 0;
+  });
   let seen = false;
   try { seen = localStorage.getItem(SEEN_KEY) === '1'; } catch {}
-  if (seen) help.hidden = false; else dlg.showModal();
+  if (seen) showHelp(); else dlg.showModal();
 }
 
 export async function boot() {
