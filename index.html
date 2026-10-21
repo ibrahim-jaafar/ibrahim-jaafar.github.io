@@ -117,7 +117,7 @@ li::marker{color:var(--a2)}
 .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
 .tags span{font-size:12px;background:rgba(124,92,255,.14);color:#c4b5fd;border:1px solid rgba(124,92,255,.3);padding:3px 10px;border-radius:999px}
 .shots{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:18px}
-.shots img{width:100%;border-radius:12px;border:1px solid var(--line);display:block}
+.shots img,.shots video{width:100%;border-radius:12px;border:1px solid var(--line);display:block}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
 .grid2 .card{margin:0}
 .skills{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
@@ -531,6 +531,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
       <li>GPU hardware video decoding and TensorRT engines built from inside the app, for fast processing.</li>
       <li>Speed, CPU, GPU and memory metrics for each stage, used to decide what to optimise next.</li>
     </ul>
+    <div class="shots"><video src="img/phonecam.mp4" poster="img/phonecam.webp" autoplay muted loop playsinline preload="metadata" aria-label="PhoneCam detecting billboards in dashcam video"></video></div>
   </div>
 
   <div class="grid2">
@@ -807,9 +808,9 @@ document.querySelectorAll('[data-tiles]').forEach(sec => {
   own('.card').forEach(card => {
     const tile = document.createElement('button');
     tile.className = 'tile';
-    const img = card.querySelector('img');
+    const img = card.querySelector('img, video[poster]');
     const summary = text(card.querySelector('.after')) || text(card.querySelector('p:not(.meta)')) || text(card.querySelector('li'));
-    tile.innerHTML = (img ? `<img src="${img.getAttribute('src')}" alt="" loading="lazy">` : '') +
+    tile.innerHTML = (img ? `<img src="${img.getAttribute('poster') || img.getAttribute('src')}" alt="" loading="lazy">` : '') +
       `<h3></h3><p class="meta"></p><p></p><span class="more">View details →</span>`;
     tile.querySelector('h3').textContent = text(card.querySelector('h3'));
     const meta = text(card.querySelector('.meta'));
