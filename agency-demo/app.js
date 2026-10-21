@@ -63,15 +63,19 @@ export function dashboardView(c) {
   const funnel = steps.map(([key, label], i) => {
     const prev = i ? k[steps[i - 1][0]] : null;
     const ok = typeof k[key] === 'number' && typeof prev === 'number' && prev > 0;
-    return { label, value: fmt(k[key], 'n'), rate: i === 0 ? null : ok ? fmt(k[key] / prev, 'pct') : '—' };
+    return { label, value: fmt(k[key], 'n'), rate: i === 0 ? null : ok ? fmt(k[key] / prev, 'pct') : '—', simulated: i < 2 };
   });
   const camps = c.campaigns ?? [];
   const maxSpend = Math.max(0, ...camps.map(x => x.spend || 0)), maxLeads = Math.max(0, ...camps.map(x => x.paidLeads || 0));
   const share = (v, max) => (max ? Math.round(((v || 0) / max) * 100) : 0);
+  // the paid-leads card counts leads whose source the CRM lost; no campaign bar can hold them
+  const inBars = camps.reduce((a, x) => a + (x.paidLeads || 0), 0);
+  const unsourced = camps.length && typeof k.paidLeads === 'number' ? Math.max(0, k.paidLeads - inBars) : 0;
   return {
     cards,
     extras: d.extras.map(([key, label, type]) => ({ label, value: fmt(k[key], type) })),
     funnel,
+    unsourced,
     campaigns: camps.map(x => ({ name: x.name, spend: fmt(x.spend, 'usd'), leads: fmt(x.paidLeads, 'n'), spendPct: share(x.spend, maxSpend), leadsPct: share(x.paidLeads, maxLeads) })),
     ai: { headline: c.summary?.headline ?? '', summary: c.summary?.summary ?? '', nextSteps: c.summary?.next_steps ?? [] },
     light: c.light,
@@ -156,16 +160,17 @@ function dashBody(c, problems) {
       h('div', { class: 'dmeta' }, h('em', { class: x.tone }, x.change ?? 'no earlier figure'), x.simulated ? sim.cloneNode(true) : null)))),
     h('p', { class: 'extras' }, v.extras.map(e => h('span', {}, `${e.label}: `, h('b', {}, e.value)))),
     h('div', { class: 'drow' },
-      h('div', { class: 'dbox' }, h('h4', {}, 'Funnel ', sim.cloneNode(true)),
+      h('div', { class: 'dbox' }, h('h4', {}, 'Funnel'),
         h('ol', { class: 'funnel' }, v.funnel.map((f, i) => h('li', { style: `--w:${100 - i * 16}%` },
           f.rate && f.rate !== '—' ? h('small', {}, `${f.rate} of the step above`) : null,
-          h('div', {}, h('b', {}, f.value), ` ${f.label}`))))),
-      h('div', { class: 'dbox' }, h('h4', {}, 'Campaigns: spend and paid leads'),
+          h('div', {}, h('b', {}, f.value), ` ${f.label}`, f.simulated ? sim.cloneNode(true) : null))))),
+      h('div', { class: 'dbox' }, h('h4', {}, 'Campaigns: spend and paid leads', h('small', { class: 'sim' }, 'spend simulated')),
         v.campaigns.length ? h('ul', { class: 'camps' }, v.campaigns.map(x => h('li', {},
           h('span', { class: 'cname' }, x.name),
           h('div', { class: 'cbar spend' }, h('i', { style: `width:${x.spendPct * 0.7}%` }), h('small', {}, x.spend)),
           h('div', { class: 'cbar leads' }, h('i', { style: `width:${x.leadsPct * 0.7}%` }), h('small', {}, `${x.leads} ${x.leads === '1' ? 'lead' : 'leads'}`)))))
-          : h('p', { class: 'hint' }, 'This older report has no campaign breakdown. Run the report to see it.'))),
+          : h('p', { class: 'hint' }, 'This older report has no campaign breakdown. Run the report to see it.'),
+        v.unsourced ? h('p', { class: 'hint' }, `${v.unsourced} paid ${v.unsourced === 1 ? 'lead has' : 'leads have'} no recorded source, so ${v.unsourced === 1 ? 'it isn’t' : 'they aren’t'} in any campaign.`) : null)),
     h('div', { class: 'drow' },
       h('div', { class: 'dbox ai' }, h('h4', {}, 'What happened this week'),
         v.ai.headline ? h('p', { class: 'headline' }, v.ai.headline) : null,

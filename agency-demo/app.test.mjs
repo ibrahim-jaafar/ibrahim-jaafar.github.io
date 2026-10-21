@@ -134,3 +134,15 @@ test('numbers without a card still show as extras', () => {
   assert.deepEqual(dashboardView(store()).extras.map(e => e.label), ['Orders', 'Average order', 'Paid leads', 'Refunded']);
   assert.equal(dashboardView(store()).extras[1].value, '$200.00');
 });
+
+test('paid leads with no recorded source are counted outside the campaign bars', () => {
+  // campaigns hold 6 paid leads; the card says 8, so 2 have no source
+  assert.equal(dashboardView(clinic({ kpis: { ...clinic().kpis, paidLeads: 8 } })).unsourced, 2);
+  assert.equal(dashboardView(clinic()).unsourced, 0);
+  const old = clinic(); delete old.campaigns;
+  assert.equal(dashboardView(old).unsourced, 0);
+});
+
+test('only impressions and clicks are marked simulated in the funnel', () => {
+  assert.deepEqual(dashboardView(clinic()).funnel.map(s => s.simulated), [true, true, false, false]);
+});
