@@ -32,9 +32,6 @@ a:hover{color:var(--a3)}
 h1,h2,h3{font-family:"Space Grotesk",Inter,sans-serif;letter-spacing:-.01em}
 .mono,code,pre{font-family:"JetBrains Mono",ui-monospace,monospace}
 .wrap{margin:0 auto;padding:0 clamp(16px,2.5vw,40px)}
-.back{display:inline-block;margin:16px 0 4px;font-size:14px;color:var(--muted)}
-h1{font-size:clamp(26px,3.2vw,36px);line-height:1.1;margin:4px 0 6px}
-h1 span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 h2{font-size:22px;margin:0 0 14px}
 
 .problems{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin:0 0 14px;padding:0;border:0}
@@ -132,34 +129,22 @@ th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertic
 th{color:var(--muted);font-weight:600}
 td small{color:var(--warn)}
 .error{border-color:rgba(251,113,133,.5)}
-footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
 @media (max-width:820px){.drow,.drow:last-child{grid-template-columns:1fr}}
 
 /* toolbar: pick the data, run, and see the current stage */
-.sub{color:#cfd3e3;margin:0 0 14px;font-size:15px}
-.tbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;padding:14px 16px;margin:0 0 14px;
+.tbar{position:sticky;top:8px;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:7px 10px;margin:12px 0;
   border:1px solid rgba(124,92,255,.45);border-radius:16px;background:rgba(12,14,28,.92);backdrop-filter:blur(12px);
   box-shadow:0 10px 40px rgba(60,80,255,.25),inset 0 0 0 1px rgba(255,255,255,.03)}
-.tfield{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
-.tfield select{font:inherit;font-size:15px;color:var(--text);background:#14172a;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer}
+.tfield{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.tfield select{font:inherit;font-size:14px;color:var(--text);background:#14172a;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
 .tfield select:focus-visible{outline:2px solid var(--a2);outline-offset:2px}
-.tbar .btn{padding:10px 20px}
-.stage{flex:1 1 220px;display:flex;align-items:center;gap:10px;margin:0;font-size:14.5px;min-width:0}
+.tbar .btn{padding:7px 16px;font-size:14px;border-radius:9px;box-shadow:0 4px 16px rgba(92,120,255,.3)}
+.stage{flex:1 1 220px;display:flex;align-items:center;gap:9px;margin:0;font-size:13.5px;min-width:0}
 .stage span{overflow-wrap:anywhere}
 .stage.done span{color:var(--good)}.stage.warn span{color:var(--warn)}.stage.failed span{color:var(--bad)}
-.tbar .problems{flex-basis:100%;margin:2px 0 0}
+.tbar .problems{flex-basis:100%;margin:4px 0 2px}
 .problems legend{font-size:13.5px;color:var(--muted);margin-bottom:8px}
 
-/* above and below the dashboard */
-.rhead p{margin:0 0 6px;font-size:15px;color:#cfd3e3}
-.rhead b{color:var(--text)}
-.strip{border:1px solid var(--line);border-radius:12px;margin:0 0 14px;background:var(--glass)}
-.strip summary{font-weight:600}
-.strip.yes summary{color:var(--good)}.strip.no summary{color:var(--bad)}
-.strip ul{padding:0 16px 14px}
-.slackline{margin:0 0 18px;border:1px solid var(--line);border-radius:12px;background:var(--glass)}
-.slackline.quiet{padding:12px 16px;color:var(--muted);font-size:14.5px}
-.slackline .slack-msg{margin:0 16px 16px}
 
 /* "How it works" popup */
 .how{max-width:min(720px,calc(100vw - 32px));max-height:calc(100vh - 48px);overflow:auto;padding:26px 24px 22px;border:1px solid rgba(124,92,255,.4);
@@ -194,14 +179,29 @@ footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
 .help:focus-visible .q{outline:2px solid var(--a3);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.help.ping .q::before,.help.ping .q::after,.how[open],.how.leaving{animation:none}}
 @media (max-width:560px){.tbar{position:static}.tfield,.tbar .btn{flex:1 1 100%}.tfield select{flex:1}}
+
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.dhead h3 small{font:500 13px Inter,system-ui,sans-serif;opacity:.85;margin-left:12px}
+.how-run p{font-size:14.5px;color:#cfd3e3;margin:0 0 8px}
+.how-run b{color:var(--text)}
+.caughtline{font-weight:600}.caughtline.yes{color:var(--good)!important}.caughtline.no{color:var(--bad)!important}
+.how-run .caught{margin:6px 0 4px}
+.how-foot{margin:18px 0 0;font-size:14px}
+
+/* floating Slack button, above the ? */
+.help.slack{bottom:84px}
+.help.slack .q{background:#fff;box-shadow:0 0 22px rgba(224,30,90,.4)}
+.help.slack .q::before,.help.slack .q::after{border-color:#E01E5A}
+.help.slack .badge{position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:50%;background:#E01E5A;border:2px solid #0b0d18}
+.help.slack.quiet .q{filter:grayscale(1) brightness(.85);box-shadow:none}
+.help.slack.quiet .badge{display:none}
+.slackbox{max-width:min(560px,calc(100vw - 32px))}
+.slackbox .slack-msg{margin-top:10px}
 </style>
 </head>
 <body>
 <main class="wrap">
-  <a class="back" href="../#agents">← Ibrahim Jaafar · portfolio</a>
-  <h1>Agency report <span>automation</span></h1>
-  <p class="sub">Live: n8n saves the leads in GoHighLevel, checks the data, sends conversions to Meta, and Gemini writes the summary.</p>
-
+  <h1 class="sr-only">Agency report automation</h1>
   <section class="tbar" aria-label="Run the report">
     <label class="tfield"><span>Test data</span>
       <select id="mode">
@@ -219,14 +219,20 @@ footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
 
   <section id="result" aria-live="polite"></section>
 </main>
-<footer class="wrap">Built by <a href="../">Ibrahim Jaafar</a>. Plain-code checks first, AI only for wording, and every number in the summary is filled in by code.</footer>
 
+<button class="help slack" id="slack" type="button" aria-label="Slack alert" hidden><span class="q"><svg viewBox="0 0 54 54" aria-hidden="true" width="26" height="26"><path fill="#36C5F0" d="M19.7 0a5.4 5.4 0 0 0 0 10.8h5.4V5.4A5.4 5.4 0 0 0 19.7 0m0 14.4H5.4a5.4 5.4 0 0 0 0 10.8h14.3a5.4 5.4 0 0 0 0-10.8"/><path fill="#2EB67D" d="M54 19.8a5.4 5.4 0 0 0-10.8 0v5.4h5.4a5.4 5.4 0 0 0 5.4-5.4m-14.4 0V5.4a5.4 5.4 0 0 0-10.8 0v14.4a5.4 5.4 0 0 0 10.8 0"/><path fill="#ECB22E" d="M34.2 54a5.4 5.4 0 0 0 0-10.8h-5.4v5.4a5.4 5.4 0 0 0 5.4 5.4m0-14.4h14.4a5.4 5.4 0 0 0 0-10.8H34.2a5.4 5.4 0 0 0 0 10.8"/><path fill="#E01E5A" d="M0 34.2a5.4 5.4 0 0 0 10.8 0v-5.4H5.4A5.4 5.4 0 0 0 0 34.2m14.4 0v14.4a5.4 5.4 0 0 0 10.8 0V34.2a5.4 5.4 0 0 0-10.8 0"/></svg><i class="badge"></i></span><span class="hlabel">Alert sent to Slack</span></button>
 <button class="help" id="help" type="button" aria-label="How it works" hidden><span class="q">?</span><span class="hlabel">How it works</span></button>
+
+<dialog class="how slackbox" id="slackbox" aria-labelledby="slack-t">
+  <button class="close" type="button" aria-label="Close">✕</button>
+  <h2 id="slack-t">Slack alert</h2>
+  <div id="slack-body"></div>
+</dialog>
 
 <dialog class="how" id="how" aria-labelledby="how-t">
   <button class="close" type="button" aria-label="Close">✕</button>
   <h2 id="how-t">How this demo works</h2>
-  <p class="how-lead">A weekly marketing report for two made-up agency clients, a skin clinic and a home-goods store, built as a live n8n workflow.</p>
+  <p class="how-lead">A weekly marketing report for two made-up agency clients, a skin clinic and a home-goods store, built as a live n8n workflow: it saves the leads in GoHighLevel, checks the data, sends conversions to Meta, and Gemini writes the summary.</p>
   <ul class="how-points">
     <li><b>Live, end to end:</b> each run saves leads in a GoHighLevel sandbox, sends conversions to Meta, checks the data and asks Gemini for the summary.</li>
     <li><b>Checks in plain code:</b> duplicates, missing sources, totals that don’t add up and more are caught by code, not AI.</li>
@@ -234,6 +240,8 @@ footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
     <li><b>AI kept honest:</b> Gemini never types a number. Code fills in every figure.</li>
   </ul>
   <button class="btn" id="how-go" type="button">Try it: run the report</button>
+
+  <section class="how-run" id="how-run" hidden><h3 class="how-more">Latest run</h3><div></div></section>
 
   <h3 class="how-more">Full details</h3>
   <details><summary>What’s real and what’s made up</summary><div>
@@ -245,6 +253,7 @@ footer{padding:28px 0 40px;color:var(--muted);font-size:14px}
   <details><summary>What the AI receives (totals only, never names, phones or emails)</summary><div><pre id="ai-in">Run the report, or wait for the latest one to load.</pre></div></details>
   <details><summary>What Meta receives: one example event (personal fields SHA-256 hashed)</summary><div><pre id="meta-out"></pre></div></details>
   <details><summary>Limits</summary><div><p>The free server sleeps when nobody uses it, so the first run of the day can take a minute to start. One run at a time, at most one a minute.</p></div></details>
+  <p class="how-foot"><a href="../#agents">← Ibrahim Jaafar · portfolio</a></p>
 </dialog>
 
 <script type="module" src="app.js"></script>

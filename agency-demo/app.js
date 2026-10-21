@@ -201,7 +201,7 @@ function dashBody(c, problems) {
   ];
 }
 
-function dashboard(report, problems) {
+function dashboard(report, problems, week) {
   const body = h('div', { class: 'dbody' });
   const tabs = report.clients.map((c, i) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === 0) },
     h('i', { class: `ldot ${c.light}` }), c.name));
@@ -213,32 +213,49 @@ function dashboard(report, problems) {
   };
   tabs.forEach((t, i) => t.addEventListener('click', () => show(i)));
   show(0);
-  return h('div', { class: 'dash' }, h('div', { class: 'dhead' }, h('h3', {}, 'Client dashboard'), h('div', { role: 'tablist', class: 'dtabs' }, tabs)), body);
+  return h('div', { class: 'dash' }, h('div', { class: 'dhead' },
+    h('h3', {}, 'Client dashboard', h('small', {}, `Week of ${week}`)), h('div', { role: 'tablist', class: 'dtabs' }, tabs)), body);
+}
+
+// The floating Slack button: a red dot and a ping when this run sent an alert, grey when Slack stayed quiet.
+function showSlack(alert) {
+  const btn = $('#slack');
+  btn.hidden = false;
+  btn.classList.toggle('quiet', !alert);
+  btn.querySelector('.hlabel').textContent = alert ? 'Alert sent to Slack' : 'Slack stayed quiet';
+  $('#slack-body').replaceChildren(h('div', {}, alert
+    ? [h('p', { class: 'hint' }, 'Posted to the agency’s Slack channel when the report was saved, so a person knows to look:'),
+      h('div', { class: 'slack-msg' }, h('b', {}, 'Agency report alerts'), h('span', { class: 'app' }, 'APP'), h('p', {}, alert.replace(':warning:', '⚠️')))]
+    : h('p', {}, 'No alert this time: nothing needed a person, so Slack stayed quiet.')));
+  if (alert) { btn.classList.add('ping'); setTimeout(() => btn.classList.remove('ping'), 6000); }
+}
+function slackBox() {
+  const btn = $('#slack'), dlg = $('#slackbox');
+  btn.addEventListener('click', () => { btn.classList.remove('ping'); dlg.showModal(); });
+  dlg.querySelector('.close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
 }
 
 function render(report) {
   const problems = report.injected.map(i => i.problem);
   const week = new Date(report.weekStart).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-  const head = h('div', { class: 'rhead' }, h('p', {}, h('b', {}, `Week of ${week}`), ` · ${report.overview}`),
-    report.aiSource === 'template' ? h('p', { class: 'partial' }, 'The summary was written by the template: the AI’s answer failed the checks, or the AI didn’t answer.') : null,
-    report.partial ? h('p', { class: 'partial' }, 'Partial report: a step failed, so part of it was built without that step.') : null);
-  const out = [head];
-
+  // the run's notes live in the "How it works" popup, under "Latest run"
   const cs = caughtSummary(report.injected);
-  if (cs) out.push(h('details', { class: `strip ${cs.cls}` }, h('summary', {}, cs.text),
-    h('ul', { class: 'caught' }, report.injected.map(i => h('li', {}, h('span', {}, PROBLEM_TEXT[i.problem]?.[0] ?? i.problem),
-      i.caught === null ? h('span', { class: 'tag na' }, 'Not applicable: no conversions to hold back')
-        : h('span', { class: `tag ${i.caught ? 'yes' : 'no'}` }, i.caught ? 'Caught' : 'Missed'))))));
+  const run = $('#how-run');
+  run.querySelector('div').replaceChildren(h('div', {},
+    h('p', {}, h('b', {}, `Week of ${week}`), ` · ${report.overview}`),
+    report.aiSource === 'template' ? h('p', { class: 'partial' }, 'The summary was written by the template: the AI’s answer failed the checks, or the AI didn’t answer.') : null,
+    report.partial ? h('p', { class: 'partial' }, 'Partial report: a step failed, so part of it was built without that step.') : null,
+    cs ? [h('p', { class: `caughtline ${cs.cls}` }, cs.text),
+      h('ul', { class: 'caught' }, report.injected.map(i => h('li', {}, h('span', {}, PROBLEM_TEXT[i.problem]?.[0] ?? i.problem),
+        i.caught === null ? h('span', { class: 'tag na' }, 'Not applicable: no conversions to hold back')
+          : h('span', { class: `tag ${i.caught ? 'yes' : 'no'}` }, i.caught ? 'Caught' : 'Missed'))))]
+      : h('p', {}, 'No mistakes were put in the data this run, so every light should be green.')));
+  run.hidden = false;
 
-  out.push(dashboard(report, problems));
-
+  $('#result').replaceChildren(dashboard(report, problems, week));
   // the same code and link the server uses for the Slack message, so this is the text that was posted
-  const alert = alertText(report, 'https://ibrahim-jaafar.github.io/agency-demo/');
-  out.push(alert
-    ? h('details', { class: 'slackline' }, h('summary', {}, '🔔 Alert sent to Slack'),
-      h('div', { class: 'slack-msg' }, h('b', {}, 'Agency report alerts'), h('span', { class: 'app' }, 'APP'), h('p', {}, alert.replace(':warning:', '⚠️'))))
-    : h('p', { class: 'slackline quiet' }, '🔕 Slack stayed quiet: nothing needed a person.'));
-  $('#result').replaceChildren(...out);
+  showSlack(alertText(report, 'https://ibrahim-jaafar.github.io/agency-demo/'));
   // the server builds the AI input from these same report fields with the same code
   $('#ai-in').textContent = JSON.stringify(buildAiInput(report.clients), null, 2);
 }
@@ -328,6 +345,7 @@ export async function boot() {
   mode.addEventListener('change', () => { box.hidden = mode.value !== 'custom'; });
   showStage([], null, null);
   howItWorks();
+  slackBox();
   showMetaExample().catch(console.error);
 
   btn.addEventListener('click', async () => {
