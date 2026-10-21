@@ -149,6 +149,8 @@ Four bots, each with its own job, built with Hermes Agent. An orchestrator hands
 - **Trading analyst:** reads the news, pulls live MetaTrader 5 data, backtests strategies, and shows how the news moves the market on a live dashboard.
 - **Coding bot:** writes code in my own style and conventions.
 - **Orchestrator:** delegates tasks and acts as the middle man. For example, when the trading bot needs new code, it routes the request to the coding bot.
+- **Lean by design:** each bot has its own SOUL.md and only the skills and tools its job needs, so it doesn't carry extra context or spend extra tokens.
+- **Kanban hand-offs:** the bots deliver tasks to each other through a shared kanban board, so every hand-off is tracked.
 - Tech: Hermes Agent, Telegram, web scraping, Android emulator automation.
 
 ### Furniture CAD-to-render pipeline
