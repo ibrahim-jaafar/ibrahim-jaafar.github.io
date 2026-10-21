@@ -173,3 +173,8 @@ test('toolbar shows how many of the visitor’s mistakes were caught', () => {
   // no mistakes chosen: warnings as before
   assert.deepEqual(stageText(all, 'done', rep([])), { cls: 'warn', text: '✓ Done · 3 warnings' });
 });
+
+test('result strip says so when none of the chosen mistakes applied', () => {
+  assert.deepEqual(caughtSummary([{ problem: 'meta_mismatch', caught: null }]), { cls: 'na', text: 'You broke 1 thing: it didn’t apply this run' });
+  assert.deepEqual(caughtSummary([{ problem: 'meta_mismatch', caught: null }, { problem: 'x', caught: null }]), { cls: 'na', text: 'You broke 2 things: none of them applied this run' });
+});

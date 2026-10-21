@@ -1,5 +1,5 @@
 // Agency report demo page: starts a run on the live n8n server and shows the report.
-// Pure helpers (fmt, stepView, noticeText) are exported for the tests; boot() wires the DOM.
+// Pure helpers (fmt, stageText, caughtSummary, dashboardView, noticeText) are exported for the tests; boot() wires the DOM.
 import { makeRng } from './lib/rng.js';
 import { PROBLEMS } from './lib/scenario.js';
 import { generateLeads } from './lib/leads.js';
@@ -70,6 +70,7 @@ export function caughtSummary(injected = []) {
   const caught = injected.filter(i => i.caught === true).length, missed = injected.filter(i => i.caught === false).length;
   const head = `You broke ${plural(injected.length, 'thing')}: `;
   if (missed) return { cls: 'no', text: `${head}${caught} caught, ${missed} missed` };
+  if (!caught) return { cls: 'na', text: `${head}${injected.length === 1 ? 'it didn’t apply' : 'none of them applied'} this run` };
   if (caught < injected.length) return { cls: 'yes', text: `${head}all that applied were caught ✓` };
   return { cls: 'yes', text: `${head}${injected.length === 1 ? 'caught' : injected.length === 2 ? 'both caught' : 'all caught'} ✓` };
 }
@@ -130,8 +131,7 @@ export function noticeText(kind, info = {}) {
   if (kind === 'waking') return 'Waking up the demo server. It sleeps when nobody uses it, so this can take up to a minute…';
   if (kind === 'unavailable') return 'The demo server isn’t answering right now. Please try again later.' + (info.hasReport ? ' The last report is shown below.' : '');
   if (kind === 'joined') return 'Someone else’s run was already going, so you’re watching that one. Its test data was their choice.';
-  if (kind === 'failed') return info.timeout ? 'The run is taking much longer than usual, so the page stopped waiting. Please try again later.'
-    : 'The run hit an error and stopped. The workflow above shows where. Please try again in a minute.';
+  if (kind === 'failed') return 'The run is taking much longer than usual, so the page stopped waiting. Please try again later.';
   if (kind === 'limit') {
     if (info.reason === 'daily') return `The demo’s daily limit is reached. Please try again in about ${Math.max(1, Math.ceil((info.retryAfterSec || 0) / 3600))} hour(s).`;
     return `Someone ran the report less than a minute ago. Please try again in ${Math.max(1, info.retryAfterSec || 0)} seconds.`;
@@ -292,11 +292,12 @@ async function follow(runId, t0 = Date.now()) {
     }
     await sleep(POLL_MS);
   }
-  notice('failed', { timeout: true });
+  notice('failed');
 }
 
 // "How it works": opens by itself on the first visit; afterwards the floating ? button reopens it.
 const SEEN_KEY = 'agency-demo-how-seen';
+let runWhenReady = false;
 function howItWorks() {
   const dlg = $('#how'), help = $('#help');
   $('#how-steps').replaceChildren(...STEPS.map(([key, label]) => h('li', {}, h('b', {}, label), ' ', STEP_INFO[key])));
@@ -325,7 +326,12 @@ function howItWorks() {
   dlg.addEventListener('cancel', e => { e.preventDefault(); close(); });
   dlg.addEventListener('click', e => { if (e.target === dlg) close(); });
   dlg.querySelector('.close').addEventListener('click', close);
-  $('#how-go').addEventListener('click', () => { close(); $('#run').focus(); });
+  // "Try it" starts a run: now if the server is ready, otherwise as soon as it answers
+  $('#how-go').addEventListener('click', () => {
+    close();
+    const run = $('#run');
+    if (!run.disabled) run.click(); else runWhenReady = true;
+  });
   help.addEventListener('click', () => {
     clicked = true;
     clearInterval(repeat);
@@ -386,6 +392,7 @@ export async function boot() {
       if (r.body?.report) render(r.body.report);
       btn.disabled = false;
       btn.textContent = 'Run the report';
+      if (runWhenReady) { runWhenReady = false; btn.click(); }
       return;
     }
     if (Date.now() - t0 > WAKE_MAX_MS) { notice('unavailable', {}); btn.textContent = 'Demo unavailable'; return; }
