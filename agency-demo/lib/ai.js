@@ -84,7 +84,7 @@ const roundTo = (n, d) => Math.round(n * 10 ** d) / 10 ** d;
 const money = n => `$${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
 const pct = n => `${roundTo(n * 100, 1)}%`;
 const MONEY = new Set(['spend', 'costPerLead', 'costPerBooking', 'revenue', 'costPerOrder', 'avgOrderValue']);
-const show = (key, v) => (MONEY.has(key) ? money(v) : key === 'bookingRate' ? pct(v) : String(v));
+const show = (key, v) => (MONEY.has(key) ? money(v) : key === 'bookingRate' ? pct(v) : key === 'roas' ? `${v}×` : String(v));
 const direction = ch => (ch > 0 ? `up ${ch}%` : ch < 0 ? `down ${-ch}%` : 'unchanged');
 
 // What each {placeholder} becomes for one client. A number with no value (nothing to divide by, no earlier figure) has none.

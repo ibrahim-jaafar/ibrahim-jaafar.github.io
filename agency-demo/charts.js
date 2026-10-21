@@ -1,7 +1,7 @@
 // Small SVG charts for the dashboard: one y-scale per chart, thin marks, recessive grid,
 // a crosshair and tooltip on hover (and keyboard focus). Text always goes in as textContent.
 const NS = 'http://www.w3.org/2000/svg';
-const PAD = { l: 52, r: 12, t: 10, b: 26 };
+const PAD = { l: 52, r: 12, t: 10, b: 32 };
 const W = 480, H = 180;
 
 function el(tag, attrs = {}, ...kids) {
@@ -28,7 +28,8 @@ function niceMax(v, whole) {
 
 // series: [{ key, label, color }]; kind 'line' or 'bar'; fmt(value) for axis and tooltip
 // whole: counts, so the axis steps are whole numbers
-export function chart({ title, points, series, kind = 'line', fmt = String, highlight, whole = false, empty = 'No data for this period yet.' }) {
+// tipFmt: the tooltip's exact value (the axis can round, e.g. $3.4k)
+export function chart({ title, points, series, kind = 'line', fmt = String, tipFmt = fmt, highlight, whole = false, empty = 'No data for this period yet.' }) {
   const box = div('chart');
   box.append(div('chart-title', title));
   if (series.length > 1) {
@@ -57,21 +58,26 @@ export function chart({ title, points, series, kind = 'line', fmt = String, high
     t.textContent = fmt(v);
     svg.append(t);
   }
-  const every = Math.max(1, Math.ceil(points.length / 7));
-  points.forEach((p, i) => {
-    // every Nth label plus the last one, but never one squeezed against the last
-    const last = points.length - 1;
-    if (i !== last && (i % every || last - i < every)) return;
-    const t = el('text', { x: x(i), y: H - 8, class: 'tick', 'text-anchor': 'middle' });
+  // x labels: drawn for every point, then thinned to what fits the chart's width (see the resize below)
+  const xLabels = points.map((p, i) => {
+    const t = el('text', { x: x(i), y: H - 4, class: 'tick', 'text-anchor': 'middle' });
     t.textContent = p.label;
     svg.append(t);
+    return t;
   });
+  const thin = fit => {
+    // every Nth label plus the last one, but never one squeezed against the last
+    const every = Math.max(1, Math.ceil(points.length / fit)), last = points.length - 1;
+    xLabels.forEach((t, i) => t.setAttribute('visibility', i === last || (i % every === 0 && last - i >= every) ? 'visible' : 'hidden'));
+  };
+  thin(7);
 
   if (kind === 'bar') {
     const s = series[0], bw = Math.max(3, Math.min(28, step - 4));
     points.forEach((p, i) => {
       const v = p[s.key] ?? 0, top = y(v), hgt = PAD.t + ih - top;
-      if (hgt <= 0) return;
+      // a zero still gets a thin mark on the baseline, so "none that day" is visible
+      if (hgt <= 0) { if (typeof p[s.key] === 'number') svg.append(el('rect', { x: x(i) - bw / 2, y: PAD.t + ih - 2, width: bw, height: 2, rx: 1, fill: s.color, opacity: 0.5 })); return; }
       const r = Math.min(4, bw / 2, hgt);
       // rounded at the data end, square on the baseline
       const x0 = x(i) - bw / 2, x1 = x0 + bw, b = PAD.t + ih;
@@ -122,12 +128,12 @@ export function chart({ title, points, series, kind = 'line', fmt = String, high
       const key = document.createElement('i');
       key.style.background = s.color;
       const b = document.createElement('b');
-      b.textContent = typeof p[s.key] === 'number' ? fmt(p[s.key]) : '—';
+      b.textContent = typeof p[s.key] === 'number' ? tipFmt(p[s.key]) : '—';
       row.append(key, b, ` ${s.label}`);
       return row;
     }));
     tip.hidden = false;
-    said.textContent = `${p.label}: ${series.map(s => `${s.label} ${typeof p[s.key] === 'number' ? fmt(p[s.key]) : 'no figure'}`).join(', ')}`;
+    said.textContent = `${p.label}: ${series.map(s => `${s.label} ${typeof p[s.key] === 'number' ? tipFmt(p[s.key]) : 'no figure'}`).join(', ')}`;
     const left = (x(at) / W) * 100;
     tip.style.left = `${left}%`;
     tip.style.transform = `translateX(${left > 60 ? '-105%' : '5%'})`;
@@ -145,5 +151,14 @@ export function chart({ title, points, series, kind = 'line', fmt = String, high
     if (e.key === 'ArrowRight') { show(at + 1); e.preventDefault(); }
   });
   box.append(wrap);
+  if (typeof ResizeObserver !== 'undefined') {
+    new ResizeObserver(([e]) => {
+      const w = e.contentRect.width;
+      if (w > 0) {
+        svg.style.setProperty('--tick', `${Math.max(11, (11 * W) / w)}px`);
+        thin(Math.max(3, Math.min(7, Math.floor(w / 75))));
+      }
+    }).observe(svg);
+  }
   return box;
 }

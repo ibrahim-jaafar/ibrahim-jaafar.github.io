@@ -48,7 +48,7 @@ export function stageText(steps = [], runStatus, report, secs) {
   if (runStatus === 'running') {
     const found = STEPS.findIndex(([key]) => byKey[key]?.status === 'running' || !byKey[key] || byKey[key].status === 'pending');
     const i = found < 0 ? STEPS.length - 1 : found; // every step done: the report is being saved
-    return { cls: 'running', text: `${RUNNING_TEXT[STEPS[i][0]]}… (${i + 1} of ${STEPS.length})` };
+    return { cls: 'running', text: `${RUNNING_TEXT[STEPS[i][0]]}… (${i + 1} of ${STEPS.length})${secs ? ` · ${secs} s` : ''}` };
   }
   if (runStatus === 'failed') {
     const at = STEPS.find(([key]) => ['running', 'pending', 'failed'].includes(byKey[key]?.status ?? 'pending'));
@@ -104,7 +104,8 @@ export function dashboardView(c) {
     const sense = SENSE[key] ?? 1;
     const tone = !ch || !sense ? 'neutral' : (ch > 0) === (sense > 0) ? 'good' : 'bad';
     // a percentage can't be worked out from 0, but the earlier figure exists: say so
-    const change = ch !== null ? `${ch > 0 ? '▲ ' : ch < 0 ? '▼ ' : ''}${Math.abs(ch)}%` : c.before?.[key] === 0 ? 'was 0' : null;
+    const was = c.before?.[key];
+    const change = ch !== null ? `${ch > 0 ? '▲ ' : ch < 0 ? '▼ ' : ''}${Math.abs(ch)}%` : typeof was === 'number' && Number.isFinite(was) ? `was ${fmt(was, type)}` : null;
     return { key, label, value: fmt(k[key], type), change, tone, simulated: SIMULATED.includes(key) };
   });
   const steps = [['impressions', 'Impressions'], ['clicks', 'Clicks'], ['leads', 'Leads'], d.last];
@@ -126,7 +127,8 @@ export function dashboardView(c) {
     extras: d.extras.map(([key, label, type]) => ({ label, value: fmt(k[key], type) })),
     funnel,
     unsourced,
-    campaigns: camps.map(x => ({ name: x.name, spend: fmt(x.spend, 'usd'), leads: fmt(x.paidLeads, 'n'), spendPct: share(x.spend, maxSpend), leadsPct: share(x.paidLeads, maxLeads) })),
+    campaigns: camps.map(x => ({ name: x.name, spend: fmt(x.spend, 'usd'), leads: fmt(x.paidLeads, 'n'), spendPct: share(x.spend, maxSpend), leadsPct: share(x.paidLeads, maxLeads),
+      cpl: x.paidLeads ? fmt(x.spend / x.paidLeads, 'usd') : '—' })),
     ai: { headline: c.summary?.headline ?? '', summary: c.summary?.summary ?? '', nextSteps: c.summary?.next_steps ?? [] },
     light: c.light,
     warnings: c.warnings ?? [],
@@ -156,7 +158,9 @@ export function periodView(report, c, period, today, now = new Date()) {
   if (period === 'week') {
     // reports saved before the leads list existed were compared with the previous run, newer ones with the week before
     const vs = c.leadList ? 'the previous week (made-up history)' : 'the previous report';
-    return { kpis: c.kpis, changes: c.changes, before: c.previousKpis ?? null, rows: runRows, campaigns: c.campaigns ?? [], report: true, note: `Week of ${rangeText(weekStart, weekStart)} · compared with ${vs}` };
+    const odd = report.injected?.length ? ' · mistakes you chose are in this week’s data, so some changes look extreme' : '';
+    return { kpis: c.kpis, changes: c.changes, before: c.previousKpis ?? null, rows: runRows, campaigns: c.campaigns ?? [], report: true,
+      note: `Week of ${rangeText(weekStart, weekStart)} (last full Monday to Sunday) · compared with ${vs}${odd}` };
   }
   if (period === 'live') {
     const live = liveToday(c.client, now, runRows);
@@ -173,9 +177,11 @@ export function periodView(report, c, period, today, now = new Date()) {
   const kpis = kpisOf(inPeriodRows), before = kpisOf(cmpRows);
   const madeUp = !c.days ? ' · all days are made-up history (this report has no daily figures)'
     : [...rows, ...cmpRows].some(d => d.simulated) ? ' · days outside the run’s week are made-up history' : '';
-  return { kpis, changes: pctChanges(kpis, before), before, rows, campaigns: sumCampaigns(inPeriodRows, c.client), report: false, highlight: period === 'day' ? r.to : undefined,
+  return { kpis, changes: pctChanges(kpis, before), before, rows, campaigns: sumCampaigns(inPeriodRows, c.client), report: false, to: r.to, highlight: period === 'day' ? r.to : undefined,
     note: `${rangeText(r.from, r.to)} · compared with ${rangeText(r.cmp.from, r.cmp.to)}${madeUp}` };
 }
+
+const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 
 // Chart points: one per day, or one per month for the year.
 export function chartPoints(rows, period) {
@@ -187,25 +193,48 @@ export function chartPoints(rows, period) {
   }
   return [...groups].map(([key, ds]) => {
     const t = sumDays(ds), p = parts(period === 'year' ? `${key}-01` : key);
-    return { key, label: period === 'year' ? MONTHS[p.m - 1] : `${p.d} ${MONTHS[p.m - 1]}`, spend: t.spend, revenue: t.revenue, leads: t.leads, clicks: t.clicks,
+    // a month that isn't over yet says so, so its lower total doesn't read as a drop
+    const lastDay = new Date(Date.UTC(p.y, p.m, 0)).getUTCDate(), upto = parts(ds.at(-1).day).d;
+    const monthLabel = upto < lastDay ? `${MONTHS[p.m - 1]} (to ${ordinal(upto)})` : MONTHS[p.m - 1];
+    return { key, label: period === 'year' ? monthLabel : `${p.d} ${MONTHS[p.m - 1]}`, spend: t.spend, revenue: t.revenue, leads: t.leads, clicks: t.clicks,
       cpc: t.clicks ? Math.round((t.spend / t.clicks) * 100) / 100 : null };
   });
 }
 
 // ---------- leads table, CSV, address ----------
 const STATUS = { clinic: { converted: 'Booked', cancelled: 'Cancelled', open: 'Open' }, store: { converted: 'Ordered', cancelled: 'Refunded', open: 'Open' } };
+
+// Lead times in UTC, like the week's days, so a lead never seems to fall outside its week.
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+function utcTime(iso) {
+  const d = new Date(iso), p = parts(dayKey(d));
+  return `${DOW[d.getUTCDay()]} ${p.d} ${MONTHS[p.m - 1]}, ${d.toISOString().slice(11, 16)}`;
+}
 
 export function leadsView(list, client) {
-  return (list ?? []).map(l => {
-    const d = new Date(l.createdAt), p = parts(dayKey(d));
-    return {
-      date: `${DOW[d.getUTCDay()]} ${p.d} ${MONTHS[p.m - 1]}, ${d.toISOString().slice(11, 16)}`,
-      name: l.name, source: l.source ?? 'No source recorded', status: STATUS[client]?.[l.outcome] ?? l.outcome,
-      value: l.outcome === 'open' || !l.value ? '—' : fmt(l.value, 'usd'), duplicate: Boolean(l.duplicate), outcome: l.outcome,
-    };
-  });
+  return (list ?? []).map(l => ({
+    date: utcTime(l.createdAt),
+    name: l.name,
+    source: l.source === 'organic' ? 'Organic (not from an ad)' : l.source ?? 'No source recorded',
+    status: STATUS[client]?.[l.outcome] ?? l.outcome,
+    value: l.outcome === 'open' || !l.value ? '—' : fmt(l.value, 'usd'),
+    counted: l.outcome !== 'cancelled', // a cancelled booking or refunded order isn't in the results
+    duplicate: Boolean(l.duplicate), outcome: l.outcome,
+  }));
 }
+
+// Monthly budget pacing (made-up budgets): how much is spent against how much of the month has gone.
+export const BUDGETS = { clinic: 800, store: 700 };
+export function pacing(spend, budget, upTo) {
+  const p = parts(upTo), days = new Date(Date.UTC(p.y, p.m, 0)).getUTCDate();
+  const pct = Math.round((spend / budget) * 100), expectedPct = Math.round((p.d / days) * 100);
+  const status = pct > expectedPct + 10 ? 'over' : pct < expectedPct - 10 ? 'under' : 'on track';
+  return { spent: fmt(spend, 'usd'), budget: fmt(budget, 'usd'), pct, expectedPct, status, text: `${pct}% of the ${fmt(budget, 'usd')} monthly budget spent, ${expectedPct}% of the month gone` };
+}
+
+const SLUGS = { clinic: 'lumiere-skin-clinic', store: 'northwind-home' };
+export const csvName = (client, period, today) => period === 'day'
+  ? `${SLUGS[client]}-last-14-days-to-${addDays(today, -1)}.csv` : `${SLUGS[client]}-${period}-${today}.csv`;
 
 // One line per day (or per hour for Live). Plain numbers, so it opens cleanly in a spreadsheet.
 export function csvFor(rows, client) {
@@ -273,7 +302,7 @@ const LIGHT_TEXT = { green: 'All checks passed', orange: 'Check the warnings', r
 // One client's dashboard body for one period: cards, funnel, campaigns or chart, more charts, AI box, data health.
 const COLORS = { blue: '#2a78d6', orange: '#eb6834' }; // validated pair (dataviz reference palette, light)
 const money0 = v => (v >= 1000 ? `$${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : v < 10 && v % 1 ? `$${v.toFixed(2)}` : `$${Math.round(v)}`);
-const money2 = v => `$${v.toFixed(2)}`;
+const money2 = v => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function chartsFor(c, pv, period) {
   const valueLabel = c.client === 'clinic' ? 'Booking value' : 'Revenue';
@@ -286,7 +315,7 @@ function chartsFor(c, pv, period) {
     const two = (key, label) => [{ key, label: `${label} today`, color: COLORS.blue }, { key: `${key}Lw`, label: 'Same time last week', color: COLORS.orange }];
     return [
       chart({ title: 'Leads so far today (UTC hours)', points: pts, whole: true, series: two('leads', 'Leads'), fmt: v => String(Math.round(v)) }),
-      chart({ title: 'Ad spend so far today (simulated)', points: pts, series: two('spend', 'Ad spend'), fmt: money0 }),
+      chart({ title: 'Ad spend so far today (simulated)', points: pts, series: two('spend', 'Ad spend'), fmt: money0, tipFmt: money2 }),
       chart({ title: 'Clicks so far today (simulated)', points: pts, whole: true, series: two('clicks', 'Clicks'), fmt: v => String(Math.round(v)) }),
     ];
   }
@@ -294,7 +323,7 @@ function chartsFor(c, pv, period) {
   const hl = pv.highlight;
   const by = period === 'year' ? 'per month' : 'per day';
   return [
-    chart({ title: `Ad spend and ${valueLabel.toLowerCase()} ${by}`, points: pts, highlight: hl, fmt: money0,
+    chart({ title: `Ad spend and ${valueLabel.toLowerCase()} ${by}`, points: pts, highlight: hl, fmt: money0, tipFmt: money2,
       series: [{ key: 'spend', label: 'Ad spend (simulated)', color: COLORS.blue }, { key: 'revenue', label: valueLabel, color: COLORS.orange }],
       empty: 'This older report has no daily figures. Run the report to see them.' }),
     chart({ title: `Leads ${by}`, points: pts, kind: 'bar', highlight: hl, whole: true, fmt: v => String(Math.round(v)),
@@ -316,7 +345,7 @@ function dashBody(c, problems, pv, period) {
     v.campaigns.length ? h('ul', { class: 'camps' }, v.campaigns.map(x => h('li', {},
       h('span', { class: 'cname' }, x.name),
       h('div', { class: 'cbar spend' }, h('i', { style: `width:${x.spendPct * 0.7}%` }), h('small', {}, x.spend)),
-      h('div', { class: 'cbar leads' }, h('i', { style: `width:${x.leadsPct * 0.7}%` }), h('small', {}, `${x.leads} paid ${x.leads === '1' ? 'lead' : 'leads'}`)))))
+      h('div', { class: 'cbar leads' }, h('i', { style: `width:${x.leadsPct * 0.7}%` }), h('small', {}, `${x.leads} paid ${x.leads === '1' ? 'lead' : 'leads'} · ${x.cpl} each`)))))
       : h('p', { class: 'hint' }, 'This older report has no campaign breakdown. Run the report to see it.'),
     v.unsourced ? h('p', { class: 'hint' }, `${v.unsourced} paid ${v.unsourced === 1 ? 'lead has' : 'leads have'} no recorded source, so ${v.unsourced === 1 ? 'it isn’t' : 'they aren’t'} in any campaign.`) : null);
 
@@ -326,7 +355,7 @@ function dashBody(c, problems, pv, period) {
   csvBtn.disabled = !csvRows.length;
   csvBtn.addEventListener('click', () => {
     const url = URL.createObjectURL(new Blob([csvFor(csvRows, c.client)], { type: 'text/csv' }));
-    const a = h('a', { href: url, download: `${c.name.toLowerCase().replace(/[^a-z]+/g, '-')}-${period}-${dayKey(Date.now())}.csv` });
+    const a = h('a', { href: url, download: csvName(c.client, period, dayKey(Date.now())) });
     document.body.append(a);
     a.click();
     a.remove();
@@ -339,6 +368,7 @@ function dashBody(c, problems, pv, period) {
       h('span', {}, x.label), h('b', {}, x.value),
       h('div', { class: 'dmeta' }, h('em', { class: x.tone }, x.change ?? 'no earlier figure'), x.simulated ? sim.cloneNode(true) : null)))),
     h('p', { class: 'extras' }, v.extras.map(e => h('span', {}, `${e.label}: `, h('b', {}, e.value)))),
+    period === 'month' ? pacingBox(c, pv) : null,
     h('div', { class: 'drow' }, funnel, campaigns),
     h('div', { class: 'charts' }, chartsFor(c, pv, period).map(ch => h('div', { class: 'dbox' }, ch))),
   ];
@@ -359,6 +389,16 @@ function dashBody(c, problems, pv, period) {
   return out;
 }
 
+// Month view: spend against the client's monthly budget (made-up budgets), and where it should be by now.
+function pacingBox(c, pv) {
+  const p = pacing(pv.kpis.spend ?? 0, BUDGETS[c.client], pv.to);
+  const word = { over: 'Spending faster than planned', under: 'Spending slower than planned', 'on track': 'On track' }[p.status];
+  return h('div', { class: `dbox pacing ${p.status.replace(' ', '-')}` },
+    h('div', { class: 'pace-head' }, h('h4', {}, 'Monthly budget', h('small', { class: 'sim' }, 'made-up budget')), h('span', { class: 'pace-tag' }, word)),
+    h('div', { class: 'pace-bar', role: 'img', 'aria-label': p.text }, h('i', { style: `width:${Math.min(100, p.pct)}%` }), h('b', { style: `left:${Math.min(100, p.expectedPct)}%` })),
+    h('p', { class: 'hint' }, `${p.spent} of ${p.budget} spent: ${p.pct}% of the budget with ${p.expectedPct}% of the month gone. The line marks where spend should be by now.`));
+}
+
 // The week's leads: the 10 newest, with a button for the rest.
 const LEADS_SHOWN = 10;
 function leadsTable(c) {
@@ -371,7 +411,8 @@ function leadsTable(c) {
   const fill = all => tbody.replaceChildren(...rows.slice(0, all ? rows.length : LEADS_SHOWN).map(r => h('tr', {},
     h('td', {}, r.date), h('td', {}, r.name, r.duplicate ? h('small', { class: 'dupe', title: 'Same person, phone or email written differently' }, 'duplicate') : null),
     h('td', { class: r.source === 'No source recorded' ? 'nosrc' : '' }, r.source),
-    h('td', {}, h('span', { class: `status ${r.outcome}` }, r.status)), h('td', { class: 'num' }, r.value))));
+    h('td', {}, h('span', { class: `status ${r.outcome}` }, r.status)),
+    h('td', r.counted ? { class: 'num' } : { class: 'num void', title: 'Cancelled or refunded: not counted in the results' }, r.value))));
   fill(false);
   box.append(h('div', { class: 'tablewrap' }, h('table', { class: 'leads' },
     h('thead', {}, h('tr', {}, ...['Date (UTC)', 'Name', 'Campaign', 'Status', 'Value'].map((t, i) => h('th', i === 4 ? { class: 'num' } : {}, t)))), tbody)));
@@ -413,6 +454,13 @@ function dashboard(report, problems) {
   };
   tabs.forEach((t, i) => t.addEventListener('click', () => { state.ci = i; draw(); }));
   pbtns.forEach(b => b.addEventListener('click', () => { state.period = b.dataset.p; draw(); }));
+  // the address edited by hand, or back/forward, moves the dashboard too
+  window.onhashchange = () => {
+    const h2 = parseHash(location.hash);
+    if (h2.client) state.ci = Math.max(0, report.clients.findIndex(c => c.client === h2.client));
+    if (h2.period) state.period = h2.period;
+    if (body.isConnected) draw();
+  };
   draw();
   return h('div', { class: 'dash' }, h('div', { class: 'dhead' },
     h('div', { class: 'dleft' }, h('h3', {}, 'Client dashboard'), h('div', { class: 'periods', role: 'group', 'aria-label': 'Period' }, pbtns)),
@@ -487,7 +535,7 @@ async function follow(runId, t0 = Date.now()) {
   while (Date.now() - t0 < RUN_MAX_MS) {
     const s = await call(`/status?run=${encodeURIComponent(runId)}`).then(r => r.body, () => null);
     if (s?.runId === runId) {
-      showStage(s.steps, s.status, s.report, s.status === 'running' ? null : Math.round((Date.now() - t0) / 1000));
+      showStage(s.steps, s.status, s.report, Math.round((Date.now() - t0) / 1000));
       if (s.status === 'failed') return;
       if (s.status !== 'running') { if (s.report) render(s.report); return; }
     }
@@ -593,6 +641,7 @@ export async function boot() {
     if (r?.status === 200) {
       showStage(r.body?.steps ?? [], r.body?.report ? r.body.status : null, r.body?.report);
       if (r.body?.report) render(r.body.report);
+      else $('#result').replaceChildren(h('div', { class: 'dash loading' }, h('p', {}, 'No report yet. Press Run the report to make the first one.')));
       btn.disabled = false;
       btn.textContent = 'Run the report';
       if (runWhenReady) { runWhenReady = false; btn.click(); }

@@ -74,8 +74,8 @@ test('funnel runs impressions to bookings or orders, with rates', () => {
 
 test('campaign bars are shares of the biggest campaign', () => {
   assert.deepEqual(dashboardView(clinic()).campaigns, [
-    { name: 'Botox Spring', spend: '$100.00', leads: '4', spendPct: 100, leadsPct: 100 },
-    { name: 'Laser', spend: '$50.00', leads: '2', spendPct: 50, leadsPct: 50 }]);
+    { name: 'Botox Spring', spend: '$100.00', leads: '4', spendPct: 100, leadsPct: 100, cpl: '$25.00' },
+    { name: 'Laser', spend: '$50.00', leads: '2', spendPct: 50, leadsPct: 50, cpl: '$25.00' }]);
   const none = dashboardView(clinic({ campaigns: [{ name: 'A', spend: 0, paidLeads: 0, impressions: 0, clicks: 0 }] })).campaigns;
   assert.deepEqual(none.map(c => [c.spendPct, c.leadsPct]), [[0, 0]]);
 });
@@ -203,7 +203,7 @@ test('the week view is the run report itself', () => {
   assert.equal(v.report, true);
   assert.equal(v.rows.length, 7);
   assert.equal(v.rows[0].day, week);
-  assert.match(v.note, /Week of 12 Oct 2026 · compared with the previous report/);
+  assert.match(v.note, /Week of 12 Oct 2026 \(last full Monday to Sunday\) · compared with the previous report/);
 });
 
 test('day, month and year are added up from daily totals and compared fairly', () => {
@@ -301,7 +301,7 @@ test('the leads table: readable status per client, value only when it counts, ne
   assert.deepEqual(s.map(r => r.status), ['Ordered', 'Open', 'Refunded']);
   assert.deepEqual(s.map(r => r.value), ['$240.00', '—', '$120.00']);
   assert.deepEqual(s.map(r => r.source), ['Living Room Sale', 'No source recorded', 'Retargeting']);
-  assert.equal(s[0].date, 'Sat 17 Oct, 09:30');
+  assert.equal(s[0].date, 'Sat 17 Oct, 09:30'); // UTC, like the week's days
   assert.equal(s[1].duplicate, true);
   assert.deepEqual(leadsView(list, 'clinic').map(r => r.status), ['Booked', 'Open', 'Cancelled']);
   assert.deepEqual(leadsView(null, 'clinic'), []);
@@ -324,4 +324,66 @@ test('the address keeps the client and period, and ignores anything odd', () => 
   assert.deepEqual(parseHash('#client=<script>&period=decade'), { client: null, period: null });
   assert.deepEqual(parseHash(''), { client: null, period: null });
   assert.equal(hashFor('clinic', 'week'), '#client=clinic&period=week');
+});
+
+// ---------- user walkthrough fixes ----------
+import { pacing, csvName } from './app.js';
+
+test('when there is an earlier figure, the card says what it was', () => {
+  const v = dashboardView(clinic({ kpis: { ...clinic().kpis, costPerLead: null }, changes: { costPerLead: null }, before: { costPerLead: 27.81, bookingRate: 0.1429 } }));
+  assert.equal(v.cards.find(c => c.key === 'costPerLead').change, 'was $27.81');
+  const r = dashboardView(clinic({ kpis: { ...clinic().kpis, bookingRate: null }, changes: { bookingRate: null }, before: { bookingRate: 0.1429 } }));
+  assert.equal(r.cards.find(c => c.key === 'bookingRate').change, 'was 14.3%');
+  assert.equal(dashboardView(clinic({ changes: { bookings: null }, before: { bookings: 0 } })).cards.find(c => c.key === 'bookings').change, 'was 0');
+});
+
+test('while running, the toolbar counts the seconds so a long step doesn’t look stuck', () => {
+  assert.equal(stageText([{ key: 'ghl', status: 'running' }], 'running', null, 23).text, 'Saving the leads in GoHighLevel… (1 of 5) · 23 s');
+});
+
+test('the year chart says the last month is only part of a month', () => {
+  const rows = daySeries('clinic', '2026-09-01', '2026-10-20');
+  assert.deepEqual(chartPoints(rows, 'year').map(p => p.label), ['Sep', 'Oct (to 20th)']);
+  assert.deepEqual(chartPoints(daySeries('clinic', '2026-09-01', '2026-09-30'), 'year').map(p => p.label), ['Sep']);
+});
+
+test('leads table: UTC time like the week, organic named, cancelled value not counted', () => {
+  const s = leadsView([
+    { name: 'A B.', source: 'organic', outcome: 'open', value: 0, createdAt: '2026-10-17T09:30:00.000Z', duplicate: false },
+    { name: 'C D.', source: 'Ads', outcome: 'cancelled', value: 150, createdAt: '2026-12-17T09:30:00.000Z', duplicate: false },
+  ], 'clinic');
+  assert.equal(s[0].date, 'Sat 17 Oct, 09:30');
+  assert.equal(s[1].date, 'Thu 17 Dec, 09:30');
+  assert.equal(s[0].source, 'Organic (not from an ad)');
+  assert.equal(s[1].counted, false);
+  assert.equal(s[1].value, '$150.00');
+});
+
+test('each campaign shows its cost per paid lead', () => {
+  const v = dashboardView(clinic());
+  assert.deepEqual(v.campaigns.map(c => c.cpl), ['$25.00', '$25.00']);
+  const none = dashboardView(clinic({ campaigns: [{ name: 'A', spend: 5, paidLeads: 0, impressions: 10, clicks: 1 }] }));
+  assert.equal(none.campaigns[0].cpl, '—');
+});
+
+test('the week says it is the last full week, and warns when the data has chosen mistakes', () => {
+  const plain = periodView(rep, storeC({ leadList: [] }), 'week', '2026-10-21');
+  assert.match(plain.note, /^Week of 12 Oct 2026 \(last full Monday to Sunday\) · compared with the previous week/);
+  const broken = periodView({ ...rep, injected: [{ problem: 'edge_cases', caught: true }] }, storeC({ leadList: [] }), 'week', '2026-10-21');
+  assert.match(broken.note, /mistakes you chose are in this week’s data, so some changes look extreme/);
+});
+
+test('monthly budget pacing: spent so far against where it should be by today', () => {
+  assert.deepEqual(pacing(400, 800, '2026-10-20'), { spent: '$400.00', budget: '$800.00', pct: 50, expectedPct: 65, status: 'under', text: '50% of the $800.00 monthly budget spent, 65% of the month gone' });
+  assert.equal(pacing(700, 800, '2026-10-20').status, 'over');
+  assert.equal(pacing(520, 800, '2026-10-20').status, 'on track');
+});
+
+test('CSV file names are plain and say what they hold', () => {
+  assert.equal(csvName('clinic', 'day', '2026-10-21'), 'lumiere-skin-clinic-last-14-days-to-2026-10-20.csv');
+  assert.equal(csvName('store', 'month', '2026-10-21'), 'northwind-home-month-2026-10-21.csv');
+});
+
+test('cost per click with no clicks shows a dash in the CSV, not a number', () => {
+  assert.equal(csvFor([{ day: '2026-10-12', leads: 0, paidLeads: 0, conversions: 0, cancelled: 0, revenue: 0, spend: 3, impressions: 0, clicks: 0 }], 'clinic').split('\n')[1].split(',')[9], '');
 });

@@ -591,7 +591,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
         <li>Simulates the endmill cutting along the centre, inside or outside of a path, and repairs small gaps within a set tolerance.</li>
         <li>A SolidWorks add-in with its own toolbar, plus a pass that rejoins broken curves into whole ones.</li>
         <li>SolidWorks-style dimensions to place a pattern exactly on the board, a reusable pattern library, and project files to pause and resume a job.</li>
-        <li>About 16,000 lines of Python, covered by 225 automated tests.</li>
+        <li>About 16,000 lines of Python, covered by 160 automated tests.</li>
       </ul>
     </div>
     <div class="card">
@@ -625,7 +625,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
     <p class="meta">Live · n8n · GoHighLevel API · Meta Conversions API · Gemini</p>
     <p>A weekly marketing report for two made-up agency clients, a skin clinic and a home-goods store. It pulls each client's leads and ad spend, sends conversions to Meta, checks the data for mistakes in plain code, and writes a short summary a client can read. Visitors can run it on clean data or break the data on purpose and see what the checks catch, then explore the results on a client dashboard.</p>
     <ul>
-      <li><b>Client dashboard:</b> each client gets a dashboard like a real agency report: spend, cost per click, leads, cost per lead and results, each with its change (green when it's good news), a funnel from impressions to bookings or orders, spend per campaign and charts. Day, week, month and year views are added up from daily totals, with costs and rates worked out again from the sums, never averaged, and a Live view shows today so far. Impressions, clicks and spend, the history outside the run's week and the live feed are simulated and labelled as such.</li>
+      <li><b>Client dashboard:</b> each client gets a dashboard like a real agency report: spend, cost per click, leads, cost per lead and results, each with its change (green when it's good news), a funnel from impressions to bookings or orders, spend per campaign, charts, the week's leads and a CSV download. Day, week, month and year views are added up from daily totals, with costs and rates worked out again from the sums, never averaged, and a Live view shows today so far. Impressions, clicks and spend, the history outside the run's week and the live feed are simulated and labelled as such.</li>
       <li><b>Checks in code, not AI:</b> leads with no source, duplicates written differently (+961 vs 0, capital letters), Meta and CRM not matching, totals that don't add up, unusually large orders and events Meta rejects.</li>
       <li><b>Edge cases handled:</b> an empty week shows "no leads yet" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.</li>
       <li><b>Private by design:</b> the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.</li>

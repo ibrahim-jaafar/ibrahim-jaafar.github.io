@@ -109,7 +109,8 @@ export function sumCampaigns(rows, client) {
 // are marked the same way the duplicates check counts them (same person, phone or email written differently).
 export function leadList(leads, weekStart) {
   const emails = new Set(), phones = new Set();
-  const rows = leads.filter(l => inPeriod(l, weekStart)).map(l => {
+  // oldest first, so the mark goes on the later copy whatever order the CRM returned the leads in
+  const rows = leads.filter(l => inPeriod(l, weekStart)).sort((a, b) => a.createdAt.localeCompare(b.createdAt)).map(l => {
     const e = normaliseEmail(l.email), p = normalisePhone(l.phone);
     const duplicate = Boolean((e && emails.has(e)) || (p && phones.has(p)));
     if (e) emails.add(e);
