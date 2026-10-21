@@ -197,6 +197,36 @@ td small{color:var(--warn)}
 .help.slack.quiet .badge{display:none}
 .slackbox{max-width:min(560px,calc(100vw - 32px))}
 .slackbox .slack-msg{margin-top:10px}
+
+/* period buttons and charts */
+.dleft{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.periods{display:flex;gap:2px;padding:3px;border-radius:99px;background:rgba(255,255,255,.14)}
+.periods button{font:inherit;font-size:13.5px;display:flex;align-items:center;gap:6px;border:0;border-radius:99px;padding:5px 12px;cursor:pointer;color:#fff;background:transparent}
+.periods button[aria-pressed="true"]{background:#fff;color:#1e3a8a;font-weight:600}
+.periods button:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.livedot{width:7px;height:7px;border-radius:50%;background:#ef4444;box-shadow:0 0 0 0 rgba(239,68,68,.6);animation:live 1.6s infinite}
+@keyframes live{70%{box-shadow:0 0 0 6px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+.pnote{font-size:13px;color:var(--d-muted);margin:0 2px 10px}
+.pfoot{color:var(--d-muted)!important;margin:4px 2px 0}
+.charts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,460px),1fr));gap:12px;margin-bottom:12px}
+.chart{min-width:0}
+.chart-title{font-weight:600;font-size:14px;margin-bottom:6px}
+.chart-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--d-muted);margin-bottom:4px}
+.chart-legend span{display:flex;align-items:center;gap:6px}
+.chart-wrap{position:relative;outline:none;border-radius:8px}
+.chart-wrap:focus-visible{box-shadow:0 0 0 2px #2563eb}
+.chart-svg{display:block;width:100%;height:auto;overflow:visible}
+.chart-svg .grid{stroke:#e8ecf3;stroke-width:1}
+.chart-svg .axis{stroke:#c9d1df;stroke-width:1}
+.chart-svg .tick{font:11px Inter,system-ui,sans-serif;fill:#6b7385}
+.chart-svg .hair{stroke:#94a0b8;stroke-width:1;stroke-dasharray:3 3}
+.chart-svg .hit{cursor:crosshair}
+.chart-tip{position:absolute;top:6px;pointer-events:none;background:#fff;border:1px solid var(--d-line);border-radius:8px;padding:6px 10px;font-size:12.5px;box-shadow:0 6px 18px rgba(20,30,60,.12);white-space:nowrap;color:var(--d-text)}
+.tip-head{color:var(--d-muted);margin-bottom:2px}
+.tip-row{display:flex;align-items:center;gap:6px}
+.tip-row i{width:12px;height:2px;border-radius:2px}
+.chart-empty{font-size:13.5px;color:var(--d-muted);padding:30px 0;text-align:center}
+@media (prefers-reduced-motion:reduce){.livedot{animation:none}}
 </style>
 </head>
 <body>
@@ -238,6 +268,7 @@ td small{color:var(--warn)}
     <li><b>Checks in plain code:</b> duplicates, missing sources, totals that don’t add up and more are caught by code, not AI.</li>
     <li><b>Break it yourself:</b> pick “Choose problems”, run it, and see what the checks catch.</li>
     <li><b>AI kept honest:</b> Gemini never types a number. Code fills in every figure.</li>
+    <li><b>Day, week, month, year and live:</b> switch the dashboard’s period to see the numbers added up from daily totals.</li>
   </ul>
   <button class="btn" id="how-go" type="button">Try it: run the report</button>
 
@@ -247,6 +278,11 @@ td small{color:var(--warn)}
   <details><summary>What’s real and what’s made up</summary><div>
     <p><b>Live:</b> an n8n workflow on a free server. Each run saves the leads and deals in a GoHighLevel sandbox (two sub-accounts), sends the conversions to Meta’s Conversions API (a demo dataset that runs no ads), runs the data checks, and asks Gemini to write the summary. Gemini never types a number: it writes placeholders and the code fills in the real values. If its answer breaks a rule, a template writes the summary instead.</p>
     <p><b>Made up:</b> the two clients, their leads, the ad spend, impressions and clicks, and the mistakes you choose. The demo data can contain mistakes on purpose: that is what the checks are for.</p>
+  </div></details>
+  <details><summary>Day, week, month, year and live</summary><div>
+    <p><b>Week</b> is the run’s report: the CRM data, the data checks and the AI summary. Each run also saves its week day by day.</p>
+    <p><b>Day, Month and Year</b> are added up from daily totals; costs and rates are worked out again from the sums, never averaged. Day is yesterday against the same day a week before; Month and Year run to yesterday and are compared with the same days of last month or last year. Days outside the run’s week are made-up history, generated the same way every time.</p>
+    <p><b>Live</b> is today so far, refreshed every 30 seconds and provisional until the day closes, against the same time last week. It is a made-up feed; a real client’s live numbers would come from GoHighLevel webhooks and Meta’s hourly spend.</p>
   </div></details>
   <details><summary>The workflow, step by step</summary><div><ol class="how-steps" id="how-steps"></ol></div></details>
   <details><summary>The mistakes you can put in the data</summary><div><ul id="how-problems"></ul></div></details>

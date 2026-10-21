@@ -178,3 +178,72 @@ test('result strip says so when none of the chosen mistakes applied', () => {
   assert.deepEqual(caughtSummary([{ problem: 'meta_mismatch', caught: null }]), { cls: 'na', text: 'You broke 1 thing: it didn’t apply this run' });
   assert.deepEqual(caughtSummary([{ problem: 'meta_mismatch', caught: null }, { problem: 'x', caught: null }]), { cls: 'na', text: 'You broke 2 things: none of them applied this run' });
 });
+
+// ---------- periods and charts ----------
+import { periodView, chartPoints, rangeText } from './app.js';
+import { runDays, daySeries, sumDays, kpisFromTotals, periodRange, historyDay } from './lib/daily.js';
+
+const week = '2026-10-12';
+const runRows = runDays('store', [], { campaigns: [{ name: 'A', spend: 70, paidLeads: 0, impressions: 7000, clicks: 70 }] }, new Date(`${week}T00:00:00Z`));
+const rep = { weekStart: `${week}T00:00:00.000Z` };
+const storeC = (o = {}) => ({ client: 'store', name: 'Northwind Home', kpis: { spend: 70, leads: 0 }, changes: { spend: 5 }, campaigns: [], days: runRows, summary: {}, light: 'green', warnings: [], ...o });
+
+test('dates read like a person writes them', () => {
+  assert.equal(rangeText('2026-10-20', '2026-10-20'), '20 Oct 2026');
+  assert.equal(rangeText('2026-10-01', '2026-10-20'), '1–20 Oct 2026');
+  assert.equal(rangeText('2026-01-01', '2026-10-20'), '1 Jan – 20 Oct 2026');
+  assert.equal(rangeText('2025-12-29', '2026-01-04'), '29 Dec 2025 – 4 Jan 2026');
+});
+
+test('the week view is the run report itself', () => {
+  const v = periodView(rep, storeC(), 'week', '2026-10-21');
+  assert.equal(v.kpis.spend, 70);
+  assert.deepEqual(v.changes, { spend: 5 });
+  assert.equal(v.report, true);
+  assert.equal(v.rows.length, 7);
+  assert.equal(v.rows[0].day, week);
+  assert.match(v.note, /Week of 12 Oct 2026 · compared with the previous report/);
+});
+
+test('day, month and year are added up from daily totals and compared fairly', () => {
+  for (const period of ['day', 'month', 'year']) {
+    const v = periodView(rep, storeC(), period, '2026-10-21');
+    const r = periodRange(period, '2026-10-21', week);
+    const want = kpisFromTotals('store', sumDays(daySeries('store', r.from, r.to, runRows)));
+    assert.deepEqual(v.kpis, want, period);
+    assert.equal(v.report, false);
+    assert.ok(v.changes && 'spend' in v.changes, period);
+  }
+  assert.match(periodView(rep, storeC(), 'month', '2026-10-21').note, /^1–20 Oct 2026 · compared with 1–20 Sep 2026/);
+  // the month includes the run's real days
+  const m = periodView(rep, storeC(), 'month', '2026-10-21');
+  assert.equal(m.rows.find(d => d.day === week).spend, runRows[0].spend);
+  assert.match(m.note, /made-up history/);
+});
+
+test('the day view charts the two weeks up to that day', () => {
+  const v = periodView(rep, storeC(), 'day', '2026-10-21');
+  assert.equal(v.rows.length, 14);
+  assert.equal(v.rows.at(-1).day, '2026-10-20');
+  assert.equal(v.highlight, '2026-10-20');
+});
+
+test('live is today so far, against the same time last week', () => {
+  const now = new Date(Date.UTC(2026, 9, 21, 15, 0));
+  const v = periodView(rep, storeC(), 'live', '2026-10-21', now);
+  assert.equal(v.live.day, '2026-10-21');
+  assert.equal(v.kpis.leads, v.live.totals.leads);
+  assert.match(v.note, /Today so far.*15:00 UTC.*compared with the same time last Wednesday/);
+});
+
+test('chart points: one per day, or one per month for the year', () => {
+  const rows = daySeries('clinic', '2026-01-01', '2026-03-31');
+  const byMonth = chartPoints(rows, 'year');
+  assert.deepEqual(byMonth.map(p => p.label), ['Jan', 'Feb', 'Mar']);
+  assert.equal(byMonth[0].leads, rows.filter(r => r.day < '2026-02-01').reduce((a, r) => a + r.leads, 0));
+  const days = chartPoints(rows.slice(0, 3), 'month');
+  assert.deepEqual(days.map(p => p.label), ['1 Jan', '2 Jan', '3 Jan']);
+  const d = historyDay('clinic', '2026-01-01');
+  assert.equal(days[0].cpc, Math.round((d.spend / d.clicks) * 100) / 100);
+  assert.equal(chartPoints([{ day: '2026-01-01', leads: 0, spend: 5, clicks: 0, revenue: 0 }], 'month')[0].cpc, null);
+});

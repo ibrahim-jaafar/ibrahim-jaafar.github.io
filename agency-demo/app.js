@@ -4,8 +4,10 @@ import { makeRng } from './lib/rng.js';
 import { PROBLEMS } from './lib/scenario.js';
 import { generateLeads } from './lib/leads.js';
 import { buildMetaEvents } from './lib/meta.js';
-import { buildAiInput } from './lib/ai.js';
+import { buildAiInput, pctChanges } from './lib/ai.js';
 import { alertText } from './lib/report.js';
+import { chart } from './charts.js';
+import { dayKey, addDays, daySeries, sumDays, kpisFromTotals, periodRange, liveToday } from './lib/daily.js';
 
 const API = 'https://agency-report-demo.onrender.com/webhook/demo';
 const FIRST_CALL_MS = 8000, WAKE_RETRY_MS = 5000, WAKE_MAX_MS = 120000, POLL_MS = 1500, RUN_MAX_MS = 180000;
@@ -127,6 +129,61 @@ export function dashboardView(c) {
   };
 }
 
+// ---------- periods ----------
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const parts = key => { const [y, m, d] = key.split('-').map(Number); return { y, m, d }; };
+
+// "20 Oct 2026", "1–20 Oct 2026", "1 Jan – 20 Oct 2026", "29 Dec 2025 – 4 Jan 2026"
+export function rangeText(from, to) {
+  const a = parts(from), b = parts(to);
+  if (from === to) return `${b.d} ${MONTHS[b.m - 1]} ${b.y}`;
+  if (a.y === b.y && a.m === b.m) return `${a.d}–${b.d} ${MONTHS[b.m - 1]} ${b.y}`;
+  if (a.y === b.y) return `${a.d} ${MONTHS[a.m - 1]} – ${b.d} ${MONTHS[b.m - 1]} ${b.y}`;
+  return `${a.d} ${MONTHS[a.m - 1]} ${a.y} – ${b.d} ${MONTHS[b.m - 1]} ${b.y}`;
+}
+
+// What the dashboard shows for one client and one period. Week is the run's report; day, month and year
+// are added up from daily totals (the run's real days plus made-up history); live is today so far.
+export function periodView(report, c, period, today, now = new Date()) {
+  const weekStart = dayKey(report.weekStart);
+  const runRows = c.days ?? [];
+  const kpisOf = rows => kpisFromTotals(c.client, sumDays(rows));
+  if (period === 'week') {
+    return { kpis: c.kpis, changes: c.changes, rows: runRows, report: true, note: `Week of ${rangeText(weekStart, weekStart)} · compared with the previous report` };
+  }
+  if (period === 'live') {
+    const live = liveToday(c.client, now);
+    const asOf = new Date(now).toISOString().slice(11, 16);
+    const kpis = kpisFromTotals(c.client, { ...live.totals, days: 1 });
+    const before = kpisFromTotals(c.client, { ...live.lastWeek.totals, days: 1 });
+    const weekday = WEEKDAYS[new Date(`${live.day}T00:00:00Z`).getUTCDay()];
+    return { kpis, changes: pctChanges(kpis, before), rows: [], report: false, live, note: `Today so far, as of ${asOf} UTC · provisional until the day closes · compared with the same time last ${weekday} · made-up live feed` };
+  }
+  const r = periodRange(period, today, weekStart);
+  const rows = daySeries(c.client, period === 'day' ? addDays(r.to, -13) : r.from, r.to, runRows);
+  const inPeriodRows = rows.filter(d => d.day >= r.from);
+  const kpis = kpisOf(inPeriodRows), before = kpisOf(daySeries(c.client, r.cmp.from, r.cmp.to, runRows));
+  const madeUp = rows.some(d => d.simulated) ? ' · days outside the run’s week are made-up history' : '';
+  return { kpis, changes: pctChanges(kpis, before), rows, report: false, highlight: period === 'day' ? r.to : undefined,
+    note: `${rangeText(r.from, r.to)} · compared with ${rangeText(r.cmp.from, r.cmp.to)}${madeUp}` };
+}
+
+// Chart points: one per day, or one per month for the year.
+export function chartPoints(rows, period) {
+  const groups = new Map();
+  for (const d of rows) {
+    const key = period === 'year' ? d.day.slice(0, 7) : d.day;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(d);
+  }
+  return [...groups].map(([key, ds]) => {
+    const t = sumDays(ds), p = parts(period === 'year' ? `${key}-01` : key);
+    return { key, label: period === 'year' ? MONTHS[p.m - 1] : `${p.d} ${MONTHS[p.m - 1]}`, spend: t.spend, revenue: t.revenue, leads: t.leads, clicks: t.clicks,
+      cpc: t.clicks ? Math.round((t.spend / t.clicks) * 100) / 100 : null };
+  });
+}
+
 export function noticeText(kind, info = {}) {
   if (kind === 'waking') return 'Waking up the demo server. It sleeps when nobody uses it, so this can take up to a minute…';
   if (kind === 'unavailable') return 'The demo server isn’t answering right now. Please try again later.' + (info.hasReport ? ' The last report is shown below.' : '');
@@ -170,28 +227,68 @@ function showStage(steps, runStatus, report, secs) {
 
 const LIGHT_TEXT = { green: 'All checks passed', orange: 'Check the warnings', red: 'A step failed' };
 
-// One client's dashboard body: cards, funnel, campaigns, AI box, data health.
-function dashBody(c, problems) {
-  const v = dashboardView(c);
-  const sim = h('small', { class: 'sim' }, 'simulated');
+// One client's dashboard body for one period: cards, funnel, campaigns or chart, more charts, AI box, data health.
+const COLORS = { blue: '#2a78d6', orange: '#eb6834' }; // validated pair (dataviz reference palette, light)
+const money0 = v => (v >= 1000 ? `$${(v / 1000).toFixed(v >= 10000 ? 0 : 1)}k` : `$${Math.round(v)}`);
+const money2 = v => `$${v.toFixed(2)}`;
+
+// wideFirst: the first chart sits in the wide box next to the funnel
+function chartsFor(c, pv, period, wideFirst) {
+  const valueLabel = c.client === 'clinic' ? 'Booking value' : 'Revenue';
+  if (period === 'live') {
+    // cumulative through the day, against the same hours a week ago
+    const cumul = hrs => { let l = 0, s = 0, k = 0; return hrs.map(hr => ({ leads: (l += hr.leads), spend: Math.round((s += hr.spend) * 100) / 100, clicks: (k += hr.clicks) })); };
+    const now = cumul(pv.live.hours), before = cumul(liveToday(c.client, new Date(Date.parse(pv.live.asOf) - 7 * 864e5)).hours);
+    const pts = pv.live.hours.map((hr, i) => ({ key: String(hr.hour), label: `${String(hr.hour).padStart(2, '0')}:00`,
+      leads: now[i].leads, spend: now[i].spend, clicks: now[i].clicks, leadsLw: before[i]?.leads, spendLw: before[i]?.spend, clicksLw: before[i]?.clicks }));
+    const two = (key, label) => [{ key, label: `${label} today`, color: COLORS.blue }, { key: `${key}Lw`, label: 'Same time last week', color: COLORS.orange }];
+    return [
+      chart({ title: 'Leads so far today (UTC hours)', points: pts, whole: true, size: wideFirst ? 'wide' : 'normal', series: two('leads', 'Leads'), fmt: v => String(Math.round(v)) }),
+      chart({ title: 'Ad spend so far today (simulated)', points: pts, series: two('spend', 'Ad spend'), fmt: money0 }),
+      chart({ title: 'Clicks so far today (simulated)', points: pts, whole: true, series: two('clicks', 'Clicks'), fmt: v => String(Math.round(v)) }),
+    ];
+  }
+  const pts = chartPoints(pv.rows, period);
+  const hl = pv.highlight;
+  const by = period === 'year' ? 'per month' : 'per day';
   return [
+    chart({ title: `Ad spend and ${valueLabel.toLowerCase()} ${by}`, points: pts, highlight: hl, fmt: money0, size: wideFirst ? 'wide' : 'normal',
+      series: [{ key: 'spend', label: 'Ad spend (simulated)', color: COLORS.blue }, { key: 'revenue', label: valueLabel, color: COLORS.orange }],
+      empty: 'This older report has no daily figures. Run the report to see them.' }),
+    chart({ title: `Leads ${by}`, points: pts, kind: 'bar', highlight: hl, whole: true, fmt: v => String(Math.round(v)),
+      series: [{ key: 'leads', label: 'Leads', color: COLORS.blue }], empty: 'This older report has no daily figures. Run the report to see them.' }),
+    chart({ title: `Cost per click ${by} (simulated)`, points: pts, highlight: hl, fmt: money2,
+      series: [{ key: 'cpc', label: 'Cost per click', color: COLORS.blue }], empty: 'This older report has no daily figures. Run the report to see them.' }),
+  ];
+}
+
+function dashBody(c, problems, pv, period) {
+  // the week keeps the run's campaigns, AI summary and data checks; other periods are added-up numbers
+  const v = dashboardView({ ...c, kpis: pv.kpis, changes: pv.changes, campaigns: pv.report ? c.campaigns : [] });
+  const sim = h('small', { class: 'sim' }, 'simulated');
+  const funnel = h('div', { class: 'dbox' }, h('h4', {}, 'Funnel'),
+    h('ol', { class: 'funnel' }, v.funnel.map((f, i) => h('li', { style: `--w:${100 - i * 16}%` },
+      f.rate && f.rate !== '—' ? h('small', {}, `${f.rate} of the step above`) : null,
+      h('div', {}, h('b', {}, f.value), ` ${f.label}`, f.simulated ? sim.cloneNode(true) : null)))));
+  const campaigns = h('div', { class: 'dbox' }, h('h4', {}, 'Campaigns: spend and paid leads', h('small', { class: 'sim' }, 'spend simulated')),
+    v.campaigns.length ? h('ul', { class: 'camps' }, v.campaigns.map(x => h('li', {},
+      h('span', { class: 'cname' }, x.name),
+      h('div', { class: 'cbar spend' }, h('i', { style: `width:${x.spendPct * 0.7}%` }), h('small', {}, x.spend)),
+      h('div', { class: 'cbar leads' }, h('i', { style: `width:${x.leadsPct * 0.7}%` }), h('small', {}, `${x.leads} ${x.leads === '1' ? 'lead' : 'leads'}`)))))
+      : h('p', { class: 'hint' }, 'This older report has no campaign breakdown. Run the report to see it.'),
+    v.unsourced ? h('p', { class: 'hint' }, `${v.unsourced} paid ${v.unsourced === 1 ? 'lead has' : 'leads have'} no recorded source, so ${v.unsourced === 1 ? 'it isn’t' : 'they aren’t'} in any campaign.`) : null);
+  const [first, ...rest] = chartsFor(c, pv, period, !pv.report);
+  const out = [
+    h('p', { class: 'pnote' }, pv.note),
     h('div', { class: 'dcards' }, v.cards.map((x, i) => h('div', { class: `dcard c${i}` },
       h('span', {}, x.label), h('b', {}, x.value),
       h('div', { class: 'dmeta' }, h('em', { class: x.tone }, x.change ?? 'no earlier figure'), x.simulated ? sim.cloneNode(true) : null)))),
     h('p', { class: 'extras' }, v.extras.map(e => h('span', {}, `${e.label}: `, h('b', {}, e.value)))),
-    h('div', { class: 'drow' },
-      h('div', { class: 'dbox' }, h('h4', {}, 'Funnel'),
-        h('ol', { class: 'funnel' }, v.funnel.map((f, i) => h('li', { style: `--w:${100 - i * 16}%` },
-          f.rate && f.rate !== '—' ? h('small', {}, `${f.rate} of the step above`) : null,
-          h('div', {}, h('b', {}, f.value), ` ${f.label}`, f.simulated ? sim.cloneNode(true) : null))))),
-      h('div', { class: 'dbox' }, h('h4', {}, 'Campaigns: spend and paid leads', h('small', { class: 'sim' }, 'spend simulated')),
-        v.campaigns.length ? h('ul', { class: 'camps' }, v.campaigns.map(x => h('li', {},
-          h('span', { class: 'cname' }, x.name),
-          h('div', { class: 'cbar spend' }, h('i', { style: `width:${x.spendPct * 0.7}%` }), h('small', {}, x.spend)),
-          h('div', { class: 'cbar leads' }, h('i', { style: `width:${x.leadsPct * 0.7}%` }), h('small', {}, `${x.leads} ${x.leads === '1' ? 'lead' : 'leads'}`)))))
-          : h('p', { class: 'hint' }, 'This older report has no campaign breakdown. Run the report to see it.'),
-        v.unsourced ? h('p', { class: 'hint' }, `${v.unsourced} paid ${v.unsourced === 1 ? 'lead has' : 'leads have'} no recorded source, so ${v.unsourced === 1 ? 'it isn’t' : 'they aren’t'} in any campaign.`) : null)),
-    h('div', { class: 'drow' },
+    h('div', { class: 'drow' }, funnel, pv.report ? campaigns : h('div', { class: 'dbox' }, first)),
+    h('div', { class: 'charts' }, (pv.report ? [first, ...rest] : rest).map(ch => h('div', { class: 'dbox' }, ch))),
+  ];
+  if (pv.report) {
+    out.push(h('div', { class: 'drow' },
       h('div', { class: 'dbox ai' }, h('h4', {}, 'What happened this week'),
         v.ai.headline ? h('p', { class: 'headline' }, v.ai.headline) : null,
         v.ai.summary ? h('p', {}, v.ai.summary) : null,
@@ -199,23 +296,40 @@ function dashBody(c, problems) {
       h('div', { class: 'dbox' }, h('h4', {}, 'Data health'),
         h('span', { class: `light ${v.light}` }, h('i'), LIGHT_TEXT[v.light] ?? ''),
         v.warnings.length ? h('ul', {}, v.warnings.map(w => h('li', {}, w.message,
-          problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null))) : null)),
-  ];
+          problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null))) : null)));
+  } else {
+    out.push(h('p', { class: 'hint pfoot' }, 'The AI summary and the data checks cover the run’s week: switch to Week to see them.'));
+  }
+  return out;
 }
 
-function dashboard(report, problems, week) {
+const PERIODS = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year'], ['live', 'Live']];
+const LIVE_MS = 30000;
+let liveTimer;
+
+function dashboard(report, problems) {
   const body = h('div', { class: 'dbody' });
+  const state = { ci: 0, period: 'week' };
   const tabs = report.clients.map((c, i) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(i === 0) },
     h('i', { class: `ldot ${c.light}` }), c.name));
-  const show = i => {
-    tabs.forEach((t, j) => t.setAttribute('aria-selected', String(i === j)));
-    const c = report.clients[i];
-    body.replaceChildren(...dashBody(c, problems));
+  const pbtns = PERIODS.map(([key, label]) => h('button', { type: 'button', 'aria-pressed': String(key === 'week'), 'data-p': key },
+    key === 'live' ? h('i', { class: 'livedot' }) : null, label));
+  const draw = () => {
+    tabs.forEach((t, j) => t.setAttribute('aria-selected', String(state.ci === j)));
+    pbtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === state.period)));
+    const c = report.clients[state.ci];
+    const pv = periodView(report, c, state.period, dayKey(Date.now()));
+    body.replaceChildren(...dashBody(c, problems, pv, state.period));
+    clearInterval(liveTimer);
+    // live numbers refresh every 30 s while Live is open
+    if (state.period === 'live') liveTimer = setInterval(() => { if (body.isConnected) draw(); else clearInterval(liveTimer); }, LIVE_MS);
   };
-  tabs.forEach((t, i) => t.addEventListener('click', () => show(i)));
-  show(0);
+  tabs.forEach((t, i) => t.addEventListener('click', () => { state.ci = i; draw(); }));
+  pbtns.forEach(b => b.addEventListener('click', () => { state.period = b.dataset.p; draw(); }));
+  draw();
   return h('div', { class: 'dash' }, h('div', { class: 'dhead' },
-    h('h3', {}, 'Client dashboard', h('small', {}, `Week of ${week}`)), h('div', { role: 'tablist', class: 'dtabs' }, tabs)), body);
+    h('div', { class: 'dleft' }, h('h3', {}, 'Client dashboard'), h('div', { class: 'periods', role: 'group', 'aria-label': 'Period' }, pbtns)),
+    h('div', { role: 'tablist', class: 'dtabs' }, tabs)), body);
 }
 
 // The floating Slack button: a red dot and a ping when this run sent an alert, grey when Slack stayed quiet.
@@ -254,7 +368,7 @@ function render(report) {
       : h('p', {}, 'No mistakes were put in the data this run, so every light should be green.')));
   run.hidden = false;
 
-  $('#result').replaceChildren(dashboard(report, problems, week));
+  $('#result').replaceChildren(dashboard(report, problems));
   // the same code and link the server uses for the Slack message, so this is the text that was posted
   showSlack(alertText(report, 'https://ibrahim-jaafar.github.io/agency-demo/'));
   // the server builds the AI input from these same report fields with the same code
