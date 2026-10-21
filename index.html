@@ -591,7 +591,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
         <li>Simulates the endmill cutting along the centre, inside or outside of a path, and repairs small gaps within a set tolerance.</li>
         <li>A SolidWorks add-in with its own toolbar, plus a pass that rejoins broken curves into whole ones.</li>
         <li>SolidWorks-style dimensions to place a pattern exactly on the board, a reusable pattern library, and project files to pause and resume a job.</li>
-        <li>About 16,000 lines of Python, covered by 160 automated tests.</li>
+        <li>About 16,000 lines of Python, covered by 225 automated tests.</li>
       </ul>
     </div>
     <div class="card">
@@ -630,7 +630,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
       <li><b>Edge cases handled:</b> an empty week shows "no leads yet" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.</li>
       <li><b>Private by design:</b> the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.</li>
       <li><b>AI kept honest:</b> it never types a number; it writes placeholders, each next to its own label, and the code fills in the real values. Its answer must also follow a strict JSON schema. A broken answer is refused and a template summary is used instead.</li>
-      <li><b>Live:</b> two n8n workflows on a free server: one plays the customers and saves them in a GoHighLevel sandbox; the other, the report a real client would get, reads them back, sends the conversions to Meta's Conversions API, asks Gemini for the summary, and posts an alert to Slack when a check fires or a run fails. The logic is covered by 146 automated tests.</li>
+      <li><b>Live:</b> two n8n workflows on a free server: one plays the customers and saves them in a GoHighLevel sandbox; the other, the report a real client would get, reads them back, sends the conversions to Meta's Conversions API, asks Gemini for the summary, and posts an alert to Slack when a check fires or a run fails. The logic is covered by 171 automated tests.</li>
     </ul>
     <p><a class="btn primary" href="agency-demo/">Try the demo →</a></p>
     <div class="shots"><img src="img/agency-demo.webp" alt="Agency report demo: client dashboard, month view, with funnel and charts" loading="lazy"></div>
