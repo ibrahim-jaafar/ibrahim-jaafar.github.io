@@ -67,7 +67,8 @@ test('funnel runs impressions to bookings or orders, with rates', () => {
   const f = dashboardView(clinic()).funnel;
   assert.deepEqual(f.map(s => s.label), ['Impressions', 'Clicks', 'Leads', 'Booked consultations']);
   assert.deepEqual(f.map(s => s.value), ['9,000', '150', '10', '3']);
-  assert.deepEqual(f.map(s => s.rate), [null, '1.7%', '6.7%', '30%']);
+  // clicks → leads uses paid leads (organic leads never clicked an ad): 6 of 150
+  assert.deepEqual(f.map(s => s.rate), [null, '1.7%', '4%', '30%']);
   assert.equal(dashboardView(store()).funnel[3].label, 'Orders');
 });
 
@@ -269,4 +270,58 @@ test('the note is honest about made-up days', () => {
 test('toolbar shows the last step when every step is done but the run is still saving', () => {
   const all = ['ghl', 'spend', 'meta', 'checks', 'ai'].map(key => ({ key, status: 'done' }));
   assert.equal(stageText(all, 'running', null).text, 'Gemini is writing the summary… (5 of 5)');
+});
+
+// ---------- realism pass ----------
+import { leadsView, csvFor, parseHash, hashFor } from './app.js';
+import { sumCampaigns } from './lib/daily.js';
+
+test('every period has campaign numbers', () => {
+  const m = periodView(rep, storeC(), 'month', '2026-10-21');
+  const r = periodRange('month', '2026-10-21', week);
+  assert.deepEqual(m.campaigns, sumCampaigns(daySeries('store', r.from, r.to, runRows), 'store'));
+  assert.equal(periodView(rep, storeC({ campaigns: [{ name: 'A', spend: 1, paidLeads: 0, impressions: 1, clicks: 1 }] }), 'week', '2026-10-21').campaigns[0].name, 'A');
+  const live = periodView(rep, storeC(), 'live', '2026-10-21', new Date(Date.UTC(2026, 9, 21, 15)));
+  assert.equal(live.campaigns.length, 3);
+});
+
+test('the week says what it is compared with', () => {
+  assert.match(periodView(rep, storeC({ leadList: [] }), 'week', '2026-10-21').note, /compared with the previous week \(made-up history\)/);
+  // reports saved before the leads list existed were compared with the previous run
+  assert.match(periodView(rep, storeC(), 'week', '2026-10-21').note, /compared with the previous report/);
+});
+
+test('the leads table: readable status per client, value only when it counts, newest first kept', () => {
+  const list = [
+    { name: 'Sara H.', source: 'Living Room Sale', outcome: 'converted', value: 240, createdAt: '2026-10-17T09:30:00.000Z', duplicate: false },
+    { name: 'Omar K.', source: null, outcome: 'open', value: 0, createdAt: '2026-10-16T18:05:00.000Z', duplicate: true },
+    { name: 'Lina S.', source: 'Retargeting', outcome: 'cancelled', value: 120, createdAt: '2026-10-15T08:00:00.000Z', duplicate: false },
+  ];
+  const s = leadsView(list, 'store');
+  assert.deepEqual(s.map(r => r.status), ['Ordered', 'Open', 'Refunded']);
+  assert.deepEqual(s.map(r => r.value), ['$240.00', '—', '$120.00']);
+  assert.deepEqual(s.map(r => r.source), ['Living Room Sale', 'No source recorded', 'Retargeting']);
+  assert.equal(s[0].date, 'Sat 17 Oct, 09:30');
+  assert.equal(s[1].duplicate, true);
+  assert.deepEqual(leadsView(list, 'clinic').map(r => r.status), ['Booked', 'Open', 'Cancelled']);
+  assert.deepEqual(leadsView(null, 'clinic'), []);
+});
+
+test('CSV export: a header and one line per day, numbers as plain values', () => {
+  const rows = [{ day: '2026-10-12', leads: 2, paidLeads: 1, conversions: 1, cancelled: 0, revenue: 150, spend: 30.5, impressions: 1200, clicks: 25, simulated: true }];
+  const csv = csvFor(rows, 'clinic');
+  const lines = csv.trim().split('\n');
+  assert.equal(lines[0], 'date,leads,paid leads,booked consultations,cancelled,booking value,ad spend,impressions,clicks,cost per click,made-up day');
+  assert.equal(lines[1], '2026-10-12,2,1,1,0,150.00,30.50,1200,25,1.22,yes');
+  assert.match(csvFor(rows, 'store').split('\n')[0], /orders,refunded,revenue/);
+  // hourly live rows
+  assert.equal(csvFor([{ hour: 9, leads: 1, paidLeads: 1, conversions: 0, cancelled: 0, revenue: 0, spend: 2, impressions: 80, clicks: 2 }], 'clinic').split('\n')[1].split(',')[0], '09:00');
+});
+
+test('the address keeps the client and period, and ignores anything odd', () => {
+  assert.deepEqual(parseHash('#client=store&period=month'), { client: 'store', period: 'month' });
+  assert.deepEqual(parseHash('#period=live'), { client: null, period: 'live' });
+  assert.deepEqual(parseHash('#client=<script>&period=decade'), { client: null, period: null });
+  assert.deepEqual(parseHash(''), { client: null, period: null });
+  assert.equal(hashFor('clinic', 'week'), '#client=clinic&period=week');
 });

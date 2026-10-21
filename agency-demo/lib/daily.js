@@ -1,13 +1,14 @@
 // Daily totals: the run's week split by day, made-up history for the other days, totals for any period,
 // and a live "today so far" feed. Month and year are added up from days; ratios come from the sums, never averaged.
 import { makeRng } from './rng.js';
-import { inPeriod } from './leads.js';
+import { inPeriod, CAMPAIGNS, normalisePhone, normaliseEmail, HOUR_CURVE } from './leads.js';
 
 const D_MS = 864e5;
 const dMoney = n => Math.round(n * 100) / 100;
 const dPer = (a, b, round) => (b ? round(a / b) : null);
 const dSum = (xs, f) => xs.reduce((a, x) => a + f(x), 0);
 const FIELDS = ['leads', 'paidLeads', 'conversions', 'cancelled', 'revenue', 'spend', 'impressions', 'clicks'];
+const CAMP_FIELDS = ['spend', 'impressions', 'clicks', 'paidLeads'];
 
 export const dayKey = d => new Date(d).toISOString().slice(0, 10);
 export const addDays = (key, n) => dayKey(Date.parse(`${key}T00:00:00Z`) + n * D_MS);
@@ -38,14 +39,13 @@ export function runDays(client, leads, spend, weekStart) {
   const w = days.map(() => 0.7 + rng() * 0.6);
   // clicks and impressions get their own day-to-day swing, so cost per click isn't flat
   const wc = w.map(x => x * (0.8 + rng() * 0.4)), wi = wc.map(x => x * (0.9 + rng() * 0.2));
-  const camps = spend.campaigns;
-  const daySpend = splitUnits(dMoney(dSum(camps, c => c.spend)), w, 100);
-  const dayImpr = splitUnits(dSum(camps, c => c.impressions || 0), wi, 1);
-  const dayClicks = splitUnits(dSum(camps, c => c.clicks || 0), wc, 1);
+  // each campaign's week is shared out over the days; a day's totals are the sum of its campaigns
+  const camps = spend.campaigns.map(c => ({ name: c.name, spend: splitUnits(c.spend, w, 100), impressions: splitUnits(c.impressions || 0, wi, 1), clicks: splitUnits(c.clicks || 0, wc, 1) }));
   const inWeek = leads.filter(l => inPeriod(l, weekStart));
   return days.map((day, i) => {
     const ls = inWeek.filter(l => dayKey(l.createdAt) === day);
     const conv = ls.filter(l => l.outcome === 'converted');
+    const campaigns = camps.map(c => ({ name: c.name, spend: c.spend[i], impressions: c.impressions[i], clicks: c.clicks[i], paidLeads: ls.filter(l => l.source === c.name).length }));
     return {
       day,
       leads: ls.length,
@@ -53,16 +53,17 @@ export function runDays(client, leads, spend, weekStart) {
       conversions: conv.length,
       cancelled: ls.filter(l => l.outcome === 'cancelled').length,
       revenue: dMoney(dSum(conv, l => l.value)),
-      spend: daySpend[i],
-      impressions: dayImpr[i],
-      clicks: dayClicks[i],
+      spend: dMoney(dSum(campaigns, c => c.spend)),
+      impressions: dSum(campaigns, c => c.impressions),
+      clicks: dSum(campaigns, c => c.clicks),
+      campaigns,
     };
   });
 }
 
 const HIST = {
-  clinic: { lead: 1.3, conv: 0.3, value: () => 150 },
-  store: { lead: 1.4, conv: 0.25, value: r => 80 + Math.floor(r() * 221) },
+  clinic: { lead: 1.09, conv: 0.3, value: () => 150, share: [0.45, 0.33, 0.22] },
+  store: { lead: 0.96, conv: 0.25, value: r => 80 + Math.floor(r() * 221), share: [0.4, 0.25, 0.35] },
 };
 function poisson(lambda, r) {
   const limit = Math.exp(-lambda);
@@ -84,10 +85,45 @@ export function historyDay(client, day) {
     const u = r();
     if (u < h.conv) { row.conversions++; row.revenue += h.value(r); } else if (u < h.conv + 0.04) row.cancelled++;
   }
-  row.spend = dMoney(lambda * 0.85 * (17 + r() * 9) + 12);
+  // about the same spend per paid lead as a run week ($14-$28), so made-up and real weeks compare fairly
+  row.spend = dMoney(lambda * 0.85 * (14 + r() * 14) + 3);
   row.clicks = Math.max(1, Math.round(row.spend / (0.6 + r() * 0.9)));
   row.impressions = Math.round(row.clicks / (0.01 + r() * 0.02));
+  // split by campaign (drawn last, so the day's own numbers stay the same as before the split existed)
+  const ws = h.share.map(x => x * (0.8 + r() * 0.4)), wk = ws.map(x => x * (0.85 + r() * 0.3));
+  const parts = { spend: splitUnits(row.spend, ws, 100), clicks: splitUnits(row.clicks, wk, 1), impressions: splitUnits(row.impressions, wk.map(x => x * (0.9 + r() * 0.2)), 1), paidLeads: splitUnits(row.paidLeads, ws, 1) };
+  row.campaigns = CAMPAIGNS[client].map((name, i) => ({ name, spend: parts.spend[i], impressions: parts.impressions[i], clicks: parts.clicks[i], paidLeads: parts.paidLeads[i] }));
   return row;
+}
+
+// Campaign totals over some days, in the client's campaign order (days without a split count as 0).
+export function sumCampaigns(rows, client) {
+  return CAMPAIGNS[client].map(name => {
+    const cs = rows.map(r => (r.campaigns || []).find(c => c.name === name)).filter(Boolean);
+    const t = Object.fromEntries(CAMP_FIELDS.map(f => [f, dSum(cs, c => c[f] || 0)]));
+    return { name, ...t, spend: dMoney(t.spend) };
+  });
+}
+
+// The week's leads for the dashboard table, newest first. Only a first name and an initial; duplicates
+// are marked the same way the duplicates check counts them (same person, phone or email written differently).
+export function leadList(leads, weekStart) {
+  const emails = new Set(), phones = new Set();
+  const rows = leads.filter(l => inPeriod(l, weekStart)).map(l => {
+    const e = normaliseEmail(l.email), p = normalisePhone(l.phone);
+    const duplicate = Boolean((e && emails.has(e)) || (p && phones.has(p)));
+    if (e) emails.add(e);
+    if (p) phones.add(p);
+    const initial = [...String(l.lastName || '')][0];
+    return { name: `${l.firstName || ''}${initial ? ` ${initial}.` : ''}`.trim() || 'Unknown', source: l.source ?? null, outcome: l.outcome, value: l.value || 0, createdAt: l.createdAt, duplicate };
+  });
+  return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+// The week before the run's week, from the same daily figures the dashboard's other views use.
+export function previousWeekKpis(client, weekStart) {
+  const start = dayKey(weekStart);
+  return kpisFromTotals(client, sumDays(daySeries(client, addDays(start, -7), addDays(start, -1))));
 }
 
 // Every day from `from` to `to`: the run's real days where there are some, made-up history for the rest.
@@ -140,12 +176,11 @@ export function periodRange(period, today, weekStart) {
   return { from, to: y, cmp: { from: monthsBack(from, 12), to: monthsBack(y, 12) } };
 }
 
-// How the day's activity builds up hour by hour (UTC): quiet at night, busy late morning and evening.
-const HOUR_W = [1, 0.6, 0.4, 0.3, 0.3, 0.5, 1, 2, 3.5, 5, 6, 6.5, 6, 6, 5.5, 5.5, 6, 6.5, 7, 7, 6, 4.5, 3, 2];
-const HOUR_SUM = dSum(HOUR_W, w => w);
+// The live day builds up hour by hour on the same curve the made-up leads arrive by.
+const HOUR_SUM = dSum(HOUR_CURVE, w => w);
 function shareBy(hours) {
   const h = Math.min(24, Math.max(0, hours)), whole = Math.floor(h);
-  return (dSum(HOUR_W.slice(0, whole), w => w) + (whole < 24 ? HOUR_W[whole] * (h - whole) : 0)) / HOUR_SUM;
+  return (dSum(HOUR_CURVE.slice(0, whole), w => w) + (whole < 24 ? HOUR_CURVE[whole] * (h - whole) : 0)) / HOUR_SUM;
 }
 function upTo(full, share) {
   const t = Object.fromEntries(FIELDS.map(f => [f, Math.round(full[f] * share)]));
@@ -171,9 +206,15 @@ export function liveToday(client, now, runRows = []) {
   const day = dayKey(now), weekAgo = addDays(day, -7);
   const hoursNow = (now - Date.parse(`${day}T00:00:00Z`)) / 36e5;
   const full = fullOf(day), before = fullOf(weekAgo);
+  const totals = upTo(full, shareBy(hoursNow));
+  // campaigns: today's totals shared out like the full day's campaigns, so they add up exactly
+  const fc = full.campaigns || [];
+  const split = (f, scale) => (totals[f] && dSum(fc, c => c[f] || 0) ? splitUnits(totals[f], fc.map(c => c[f] || 0), scale) : fc.map(() => 0));
+  const cs = Object.fromEntries(CAMP_FIELDS.map(f => [f, split(f, f === 'spend' ? 100 : 1)]));
   return {
     day, asOf: new Date(now).toISOString(),
-    totals: upTo(full, shareBy(hoursNow)), hours: hoursUpTo(full, hoursNow),
+    totals, hours: hoursUpTo(full, hoursNow),
+    campaigns: fc.map((c, i) => ({ name: c.name, spend: cs.spend[i], impressions: cs.impressions[i], clicks: cs.clicks[i], paidLeads: cs.paidLeads[i] })),
     lastWeek: { day: weekAgo, totals: upTo(before, shareBy(hoursNow)), hours: hoursUpTo(before, hoursNow) },
   };
 }

@@ -27,6 +27,7 @@ export function buildReport({ runId, weekStart, clients, steps, ai, problems, me
       kpis: c.kpis,
       campaigns: c.campaigns ?? null,
       days: c.days ?? null,
+      leadList: c.leadList ?? null,
       previousKpis: c.previousKpis,
       changes: pctChanges(c.kpis, c.previousKpis),
       warnings: c.warnings,

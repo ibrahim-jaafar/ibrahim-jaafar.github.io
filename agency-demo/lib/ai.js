@@ -87,7 +87,7 @@ const MONEY = new Set(['spend', 'costPerLead', 'costPerBooking', 'revenue', 'cos
 const show = (key, v) => (MONEY.has(key) ? money(v) : key === 'bookingRate' ? pct(v) : String(v));
 const direction = ch => (ch > 0 ? `up ${ch}%` : ch < 0 ? `down ${-ch}%` : 'unchanged');
 
-// What each {placeholder} becomes for one client. A number with no value (nothing to divide by, no previous report) has none.
+// What each {placeholder} becomes for one client. A number with no value (nothing to divide by, no earlier figure) has none.
 export function placeholderValues(c) {
   const out = {};
   for (const [k, v] of Object.entries(c.kpis || {})) if (typeof v === 'number' && Number.isFinite(v)) out[k] = show(k, v);
@@ -132,7 +132,7 @@ export function placeholderGuide() {
   return [
     'Every placeholder needs its own label within a few words of it, in the same sentence, like these examples. A placeholder without its label nearby, or right after another number\'s label, makes the answer invalid.',
     ...Object.entries(LABELS).map(([k, l]) => line(k, l)),
-    'A {name_change} placeholder needs the same label as {name}, e.g. "leads were {leads_change} on the previous report" or "cost per lead was {costPerLead_change} on the previous report".',
+    'A {name_change} placeholder needs the same label as {name}, e.g. "leads were {leads_change} on the previous week" or "cost per lead was {costPerLead_change} on the previous week".',
     ...Object.entries(COUNT_LABELS).map(([k, l]) => line(`${k}_count`, l)),
     'A {code_message} placeholder is the check\'s own sentence: put it on its own, e.g. "{duplicates_message}".',
   ].join('\n');
@@ -231,7 +231,7 @@ export function validateAiOutput(raw, input) {
 }
 
 const count = (n, key, one, many) => `{${key}} ${n === 1 ? one : many}`;
-const change = (ch, key) => (ch && ch[key] != null ? ` ({${key}_change} compared with the last run)` : '');
+const change = (ch, key) => (ch && ch[key] != null ? ` ({${key}_change} compared with the previous week)` : '');
 
 // The fallback summary, written with the same placeholders as the AI and checked by the same code.
 export function templateDraft(input) {

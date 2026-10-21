@@ -2,7 +2,7 @@
 // a crosshair and tooltip on hover (and keyboard focus). Text always goes in as textContent.
 const NS = 'http://www.w3.org/2000/svg';
 const PAD = { l: 52, r: 12, t: 10, b: 26 };
-const SIZES = { normal: [480, 180], wide: [760, 250] };
+const W = 480, H = 180;
 
 function el(tag, attrs = {}, ...kids) {
   const n = document.createElementNS(NS, tag);
@@ -28,8 +28,7 @@ function niceMax(v, whole) {
 
 // series: [{ key, label, color }]; kind 'line' or 'bar'; fmt(value) for axis and tooltip
 // whole: counts, so the axis steps are whole numbers
-export function chart({ title, points, series, kind = 'line', fmt = String, highlight, whole = false, size = 'normal', empty = 'No data for this period yet.' }) {
-  const [W, H] = SIZES[size];
+export function chart({ title, points, series, kind = 'line', fmt = String, highlight, whole = false, empty = 'No data for this period yet.' }) {
   const box = div('chart');
   box.append(div('chart-title', title));
   if (series.length > 1) {

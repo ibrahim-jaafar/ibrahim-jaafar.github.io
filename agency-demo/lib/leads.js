@@ -8,6 +8,17 @@ export const CAMPAIGNS = {
 };
 const CONVERT_RATE = { clinic: 0.3, store: 0.25 };
 const CONSULT_FEE = 150;
+// How enquiries spread over the day (UTC hours): quiet at night, busy late morning and evening.
+export const HOUR_CURVE = [1, 0.6, 0.4, 0.3, 0.3, 0.5, 1, 2, 3.5, 5, 6, 6.5, 6, 6, 5.5, 5.5, 6, 6.5, 7, 7, 6, 4.5, 3, 2];
+const CURVE_SUM = HOUR_CURVE.reduce((a, w) => a + w, 0);
+// A moment in the week: any day, an hour picked by the daily curve, any minute.
+function leadTime(rng, weekStart) {
+  const day = Math.floor(rng() * 7);
+  let u = rng() * CURVE_SUM, hour = 0;
+  while (u > HOUR_CURVE[hour] && hour < 23) u -= HOUR_CURVE[hour++];
+  return new Date(+weekStart + day * DAY_MS + hour * 36e5 + Math.floor(rng() * 3600) * 1000).toISOString();
+}
+
 const SHARED = { firstName: 'Jad', lastName: 'Sfeir', email: 'jad.sfeir@example.com', phone: '+961 71 555 010' };
 
 export function normalisePhone(s) {
@@ -58,7 +69,7 @@ export function generateLeads(client, problems, rng, weekStart) {
       email: `${first}.${last}.${n}${between(10, 99)}@example.com`.toLowerCase(),
       phone: `+961 ${national.slice(0, 2)} ${national.slice(2, 5)} ${national.slice(5)}`,
       source: rng() < 0.15 ? 'organic' : pick(CAMPAIGNS[client]),
-      createdAt: new Date(+weekStart + Math.floor(rng() * (7 * DAY_MS - 1))).toISOString(),
+      createdAt: leadTime(rng, weekStart),
       outcome: converted ? 'converted' : 'open',
       value: converted ? orderValue() : 0,
       flags: [],
@@ -81,6 +92,8 @@ export function generateLeads(client, problems, rng, weekStart) {
         id: uid(),
         email: orig.email.toUpperCase(),
         phone: `0${d.slice(0, 2)}${d.slice(2)}`,
+        // the same person fills in the form again a few hours to two days later, still inside the week
+        createdAt: new Date(Math.max(Date.parse(orig.createdAt) + 1, Math.min(Date.parse(orig.createdAt) + (1 + rng() * 47) * 36e5, +weekStart + 7 * DAY_MS - 1))).toISOString(),
         outcome: 'open',
         value: 0,
         flags: ['duplicates'],
