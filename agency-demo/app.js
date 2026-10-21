@@ -31,9 +31,57 @@ const KPI_TEXT = {
 
 const usd = n => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 export const fmt = (v, type) => typeof v !== 'number' || !Number.isFinite(v) ? '—'
-  : type === 'usd' ? usd(v) : type === 'pct' ? `${Math.round(v * 1000) / 10}%` : type === 'x' ? `${v}×` : String(v);
+  : type === 'usd' ? usd(v) : type === 'pct' ? `${Math.round(v * 1000) / 10}%` : type === 'x' ? `${v}×` : type === 'n' ? v.toLocaleString('en-US') : String(v);
 
 const sum = (xs, f) => xs.reduce((a, x) => a + (f(x) || 0), 0);
+
+// ---------- dashboard ----------
+// [kpi key, label, format]. Cards are the six big numbers; extras are every other number, so none disappear.
+const DASH = {
+  clinic: {
+    cards: [['spend', 'Ad spend', 'usd'], ['costPerClick', 'Cost per click', 'usd'], ['leads', 'Leads', 'n'], ['costPerLead', 'Cost per paid lead', 'usd'], ['bookings', 'Booked consultations', 'n'], ['bookingRate', 'Lead-to-booking rate', 'pct']],
+    extras: [['paidLeads', 'Paid leads', 'n'], ['costPerBooking', 'Cost per booking', 'usd'], ['cancelled', 'Cancelled', 'n']],
+    last: ['bookings', 'Booked consultations'],
+  },
+  store: {
+    cards: [['spend', 'Ad spend', 'usd'], ['costPerClick', 'Cost per click', 'usd'], ['leads', 'Leads', 'n'], ['costPerOrder', 'Cost per order', 'usd'], ['revenue', 'Revenue', 'usd'], ['roas', 'Return on ad spend', 'x']],
+    extras: [['orders', 'Orders', 'n'], ['avgOrderValue', 'Average order', 'usd'], ['paidLeads', 'Paid leads', 'n'], ['cancelled', 'Refunded', 'n']],
+    last: ['orders', 'Orders'],
+  },
+};
+// +1: more is better, -1: less is better, 0: neither (spend)
+const SENSE = { spend: 0, costPerClick: -1, costPerLead: -1, costPerBooking: -1, costPerOrder: -1, cancelled: -1 };
+const SIMULATED = ['spend', 'costPerClick'];
+
+export function dashboardView(c) {
+  const d = DASH[c.client] ?? DASH.clinic;
+  const k = c.kpis ?? {};
+  const cards = d.cards.map(([key, label, type]) => {
+    const ch = c.changes?.[key] ?? null;
+    const sense = SENSE[key] ?? 1;
+    const tone = !ch || !sense ? 'neutral' : (ch > 0) === (sense > 0) ? 'good' : 'bad';
+    const change = ch === null ? null : `${ch > 0 ? '▲ ' : ch < 0 ? '▼ ' : ''}${Math.abs(ch)}%`;
+    return { key, label, value: fmt(k[key], type), change, tone, simulated: SIMULATED.includes(key) };
+  });
+  const steps = [['impressions', 'Impressions'], ['clicks', 'Clicks'], ['leads', 'Leads'], d.last];
+  const funnel = steps.map(([key, label], i) => {
+    const prev = i ? k[steps[i - 1][0]] : null;
+    const ok = typeof k[key] === 'number' && typeof prev === 'number' && prev > 0;
+    return { label, value: fmt(k[key], 'n'), rate: i === 0 ? null : ok ? fmt(k[key] / prev, 'pct') : '—' };
+  });
+  const camps = c.campaigns ?? [];
+  const maxSpend = Math.max(0, ...camps.map(x => x.spend || 0)), maxLeads = Math.max(0, ...camps.map(x => x.paidLeads || 0));
+  const share = (v, max) => (max ? Math.round(((v || 0) / max) * 100) : 0);
+  return {
+    cards,
+    extras: d.extras.map(([key, label, type]) => ({ label, value: fmt(k[key], type) })),
+    funnel,
+    campaigns: camps.map(x => ({ name: x.name, spend: fmt(x.spend, 'usd'), leads: fmt(x.paidLeads, 'n'), spendPct: share(x.spend, maxSpend), leadsPct: share(x.paidLeads, maxLeads) })),
+    ai: { headline: c.summary?.headline ?? '', summary: c.summary?.summary ?? '', nextSteps: c.summary?.next_steps ?? [] },
+    light: c.light,
+    warnings: c.warnings ?? [],
+  };
+}
 
 // What each step chip shows. A failed run never finishes its open steps, so they read "Stopped".
 export function stepView(steps = [], runStatus, report) {

@@ -42,3 +42,95 @@ test('notices', () => {
   assert.match(noticeText('limit', { reason: 'daily', retryAfterSec: 3 * 3600 + 5 }), /4 hour/);
   assert.match(noticeText('unavailable', { hasReport: true }), /last report/);
 });
+
+// ---------- dashboard ----------
+import { dashboardView } from './app.js';
+
+const camps = [
+  { name: 'Botox Spring', spend: 100, paidLeads: 4, impressions: 6000, clicks: 100 },
+  { name: 'Laser', spend: 50, paidLeads: 2, impressions: 3000, clicks: 50 },
+];
+const clinic = (o = {}) => ({
+  client: 'clinic', name: 'Lumière Skin Clinic', light: 'green', warnings: [], campaigns: camps,
+  kpis: { spend: 150, leads: 10, paidLeads: 6, costPerLead: 25, cancelled: 1, bookings: 3, costPerBooking: 50, bookingRate: 0.3, impressions: 9000, clicks: 150, costPerClick: 1 },
+  changes: { spend: 50, costPerClick: 10, leads: 0, costPerLead: -5, bookings: 20, bookingRate: null },
+  summary: { headline: 'h', summary: 's', next_steps: ['n1'] }, ...o,
+});
+const store = (o = {}) => ({
+  client: 'store', name: 'Northwind Home', light: 'orange', warnings: [{ code: 'duplicates', count: 1, message: 'm' }], campaigns: camps,
+  kpis: { spend: 150, leads: 8, paidLeads: 8, costPerLead: 18.75, cancelled: 1, orders: 2, revenue: 400, roas: 2.67, costPerOrder: 75, avgOrderValue: 200, impressions: 9000, clicks: 150, costPerClick: 1 },
+  changes: { revenue: 20 }, summary: { headline: 'h', summary: 's', next_steps: [] }, ...o,
+});
+
+test('dashboard cards for each client, in order', () => {
+  assert.deepEqual(dashboardView(clinic()).cards.map(c => [c.key, c.label]), [
+    ['spend', 'Ad spend'], ['costPerClick', 'Cost per click'], ['leads', 'Leads'], ['costPerLead', 'Cost per paid lead'],
+    ['bookings', 'Booked consultations'], ['bookingRate', 'Lead-to-booking rate']]);
+  assert.deepEqual(dashboardView(store()).cards.map(c => [c.key, c.label]), [
+    ['spend', 'Ad spend'], ['costPerClick', 'Cost per click'], ['leads', 'Leads'], ['costPerOrder', 'Cost per order'],
+    ['revenue', 'Revenue'], ['roas', 'Return on ad spend']]);
+  const v = dashboardView(clinic());
+  assert.deepEqual(v.cards.filter(c => c.simulated).map(c => c.key), ['spend', 'costPerClick']);
+  assert.equal(v.cards[0].value, '$150.00');
+});
+
+test('change arrows are coloured by meaning, not direction', () => {
+  const tone = (v, key) => v.cards.find(c => c.key === key).tone;
+  const v = dashboardView(clinic());
+  assert.equal(tone(v, 'costPerClick'), 'bad');
+  assert.equal(tone(v, 'costPerLead'), 'good');
+  assert.equal(tone(v, 'spend'), 'neutral');
+  assert.equal(tone(v, 'leads'), 'neutral');
+  assert.equal(tone(v, 'bookingRate'), 'neutral');
+  assert.equal(v.cards.find(c => c.key === 'costPerClick').change, '▲ 10%');
+  assert.equal(v.cards.find(c => c.key === 'costPerLead').change, '▼ 5%');
+  assert.equal(v.cards.find(c => c.key === 'bookingRate').change, null);
+  assert.equal(tone(dashboardView(store()), 'revenue'), 'good');
+});
+
+test('funnel runs impressions to bookings or orders, with rates', () => {
+  const f = dashboardView(clinic()).funnel;
+  assert.deepEqual(f.map(s => s.label), ['Impressions', 'Clicks', 'Leads', 'Booked consultations']);
+  assert.deepEqual(f.map(s => s.value), ['9,000', '150', '10', '3']);
+  assert.deepEqual(f.map(s => s.rate), [null, '1.7%', '6.7%', '30%']);
+  assert.equal(dashboardView(store()).funnel[3].label, 'Orders');
+});
+
+test('campaign bars are shares of the biggest campaign', () => {
+  assert.deepEqual(dashboardView(clinic()).campaigns, [
+    { name: 'Botox Spring', spend: '$100.00', leads: '4', spendPct: 100, leadsPct: 100 },
+    { name: 'Laser', spend: '$50.00', leads: '2', spendPct: 50, leadsPct: 50 }]);
+  const none = dashboardView(clinic({ campaigns: [{ name: 'A', spend: 0, paidLeads: 0, impressions: 0, clicks: 0 }] })).campaigns;
+  assert.deepEqual(none.map(c => [c.spendPct, c.leadsPct]), [[0, 0]]);
+});
+
+test('an old report without clicks or campaigns still draws', () => {
+  const k = { ...clinic().kpis };
+  delete k.impressions; delete k.clicks; delete k.costPerClick;
+  const old = { ...clinic({ kpis: k }) };
+  delete old.campaigns;
+  const v = dashboardView(old);
+  assert.deepEqual(v.funnel.slice(0, 2).map(s => s.value), ['—', '—']);
+  assert.equal(v.funnel[2].rate, '—');
+  assert.deepEqual(v.campaigns, []);
+  assert.equal(v.cards.find(c => c.key === 'costPerClick').value, '—');
+});
+
+test('an empty week shows dashes, not errors', () => {
+  const v = dashboardView(clinic({ kpis: { spend: 20, leads: 0, paidLeads: 0, costPerLead: null, cancelled: 0, bookings: 0, costPerBooking: null, bookingRate: null, impressions: 500, clicks: 15, costPerClick: 1.33 }, changes: null }));
+  assert.equal(v.funnel.length, 4);
+  assert.equal(v.funnel[3].rate, '—');
+  assert.equal(v.cards.find(c => c.key === 'costPerLead').value, '—');
+  assert.ok(v.cards.every(c => c.change === null && c.tone === 'neutral'));
+});
+
+test('a missing AI summary gives empty text', () => {
+  assert.deepEqual(dashboardView(clinic({ summary: undefined })).ai, { headline: '', summary: '', nextSteps: [] });
+  assert.deepEqual(dashboardView(clinic()).ai, { headline: 'h', summary: 's', nextSteps: ['n1'] });
+});
+
+test('numbers without a card still show as extras', () => {
+  assert.deepEqual(dashboardView(clinic()).extras.map(e => e.label), ['Paid leads', 'Cost per booking', 'Cancelled']);
+  assert.deepEqual(dashboardView(store()).extras.map(e => e.label), ['Orders', 'Average order', 'Paid leads', 'Refunded']);
+  assert.equal(dashboardView(store()).extras[1].value, '$200.00');
+});
