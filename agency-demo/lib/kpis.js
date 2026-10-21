@@ -39,3 +39,10 @@ export function computeKpis(client, leads, spend, weekStart) {
     avgOrderValue: ratio(revenue, conv.length, cents),
   };
 }
+
+// The dashboard's campaign rows: the simulated spend, impressions and clicks, with paid leads counted
+// the same way as the paid-leads card (CRM leads inside the week), so the chart and the cards agree.
+export function campaignRows(spend, leads, weekStart) {
+  const inWeek = leads.filter(l => inPeriod(l, weekStart));
+  return spend.campaigns.map(c => ({ ...c, paidLeads: inWeek.filter(l => l.source === c.name).length }));
+}
