@@ -4,11 +4,10 @@ import { makeRng } from './lib/rng.js';
 import { PROBLEMS } from './lib/scenario.js';
 import { generateLeads } from './lib/leads.js';
 import { buildMetaEvents } from './lib/meta.js';
-import { buildAiInput, pctChanges } from './lib/ai.js';
+import { buildAiInput, periodWords } from './lib/ai.js';
 import { alertText } from './lib/report.js';
-import { periodChecks } from './lib/checks.js';
 import { chart } from './charts.js';
-import { dayKey, addDays, daySeries, sumDays, sumCampaigns, kpisFromTotals, periodRange, liveToday, periodLeads } from './lib/daily.js';
+import { dayKey, addDays, daySeries, sumDays, periodFigures } from './lib/daily.js';
 
 const API = 'https://agency-report-demo.onrender.com/webhook/demo';
 const FIRST_CALL_MS = 8000, WAKE_RETRY_MS = 5000, WAKE_MAX_MS = 120000, POLL_MS = 1500, RUN_MAX_MS = 180000;
@@ -19,17 +18,15 @@ export const PROBLEM_TEXT = {
   meta_mismatch: ['Meta and CRM don’t match', 'Some conversions never reach Meta'],
   bad_totals: ['Totals that don’t add up', 'Account total ≠ sum of its campaigns'],
   edge_cases: ['Edge cases', 'Empty week, cancelled booking, huge order, Arabic and emoji names, an event Meta rejects'],
-  ai_broken: ['AI gives a broken answer', 'Refusal, typed number, missing field: the template takes over'],
 };
 const WARNING_FROM = { missing_source: 'missing_source', duplicates: 'duplicates', meta_mismatch: 'meta_mismatch', bad_totals: 'bad_totals', outlier: 'edge_cases', meta_rejected: 'edge_cases' };
-const STEPS = [['ghl', 'GoHighLevel leads'], ['spend', 'Ad spend'], ['meta', 'Meta conversions'], ['checks', 'Data checks'], ['ai', 'AI summary']];
+const STEPS = [['ghl', 'GoHighLevel leads'], ['spend', 'Ad spend'], ['meta', 'Meta conversions'], ['checks', 'Data checks']];
 // for the "How it works" popup
 const STEP_INFO = {
   ghl: 'The made-up leads and deals are saved in a GoHighLevel sandbox (one sub-account per client), then read back the way a real client’s report would read them.',
   spend: 'The week’s ad spend, impressions and clicks per campaign. Simulated: real numbers only exist when real ads run.',
   meta: 'Bookings and orders are sent to Meta’s Conversions API, with personal fields SHA-256 hashed.',
   checks: 'Plain code checks the data: duplicates, missing sources, totals that don’t add up, Meta and CRM not matching, unusual orders, events Meta rejects.',
-  ai: 'Gemini writes the summary with placeholders instead of numbers; code fills in every figure. A broken answer is refused and a template is used.',
 };
 
 const usd = n => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -39,7 +36,7 @@ export const fmt = (v, type) => typeof v !== 'number' || !Number.isFinite(v) ? '
 const sum = (xs, f) => xs.reduce((a, x) => a + (f(x) || 0), 0);
 
 // ---------- toolbar ----------
-const RUNNING_TEXT = { ghl: 'Saving the leads in GoHighLevel', spend: 'Adding up the ad spend', meta: 'Sending conversions to Meta', checks: 'Checking the data', ai: 'Gemini is writing the summary' };
+const RUNNING_TEXT = { ghl: 'Saving the leads in GoHighLevel', spend: 'Adding up the ad spend', meta: 'Sending conversions to Meta', checks: 'Checking the data' };
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // The toolbar's one-line status: only the current stage while running, a summary when done.
@@ -77,6 +74,16 @@ export function caughtSummary(injected = []) {
   if (!caught) return { cls: 'na', text: `${head}${injected.length === 1 ? 'it didn’t apply' : 'none of them applied'} this run` };
   if (caught < injected.length) return { cls: 'yes', text: `${head}all that applied were caught ✓` };
   return { cls: 'yes', text: `${head}${injected.length === 1 ? 'caught' : injected.length === 2 ? 'both caught' : 'all caught'} ✓` };
+}
+
+// What happened to a test lead, for the toolbar.
+export function testLeadText(b) {
+  const store = b.client === 'store';
+  const what = { converted: store ? `ordered ${fmt(b.value, 'usd')}` : 'booked a consultation', cancelled: store ? 'ordered, then got a refund' : 'booked, then cancelled', open: 'enquired' }[b.outcome] ?? b.outcome;
+  const from = b.source === 'organic' ? 'not from an ad' : b.source ?? 'no source recorded';
+  const deal = b.deal === false ? ' (its deal wasn’t saved)' : '';
+  const meta = b.meta === null ? '' : b.meta ? ', sent to Meta' : ', but Meta didn’t take it';
+  return `✓ Test lead: ${b.name} ${what} (${from}) · saved in GoHighLevel${deal}${meta}`;
 }
 
 // ---------- dashboard ----------
@@ -130,9 +137,6 @@ export function dashboardView(c) {
     unsourced,
     campaigns: camps.map(x => ({ name: x.name, spend: fmt(x.spend, 'usd'), leads: fmt(x.paidLeads, 'n'), spendPct: share(x.spend, maxSpend), leadsPct: share(x.paidLeads, maxLeads),
       cpl: x.paidLeads ? fmt(x.spend / x.paidLeads, 'usd') : '—' })),
-    ai: { headline: c.summary?.headline ?? '', summary: c.summary?.summary ?? '', nextSteps: c.summary?.next_steps ?? [] },
-    light: c.light,
-    warnings: c.warnings ?? [],
   };
 }
 
@@ -151,59 +155,31 @@ export function rangeText(from, to) {
 }
 
 // What the dashboard shows for one client and one period: the current period so far (back = 0) or a whole
-// earlier one. Totals are added up from days (the run's real days plus made-up history); today counts up to now.
-// The run's own week (‹ on Week) is the run's report itself.
+// earlier one. The figures (lib/daily.js periodFigures) are the same ones the server gives the AI summary.
 export const HISTORY_START = '2025-01-01';
 export function periodView(report, c, period, now = new Date(), back = 0, dayVs = 'week') {
-  const weekStart = dayKey(report.weekStart);
-  const runRows = c.days ?? [];
-  const today = dayKey(now);
-  const r = periodRange(period, today, back);
-  // Day is compared with the same weekday a week before (weekends are quieter), or with the day before if asked
-  if (period === 'day' && dayVs === 'prev') r.cmp = { from: addDays(r.from, -1), to: addDays(r.from, -1) };
-  const kpisOf = rows => kpisFromTotals(c.client, sumDays(rows));
-  const title = r.current ? { day: 'Today', week: 'This week', month: 'This month', year: 'This year' }[period] : rangeText(r.from, r.to);
-  const base = { from: r.from, to: r.to, current: r.current, title, earliest: r.from <= HISTORY_START, runWeek: rangeText(weekStart, addDays(weekStart, 6)) };
-  if (period === 'week' && r.from === weekStart && !r.current) {
-    // reports saved before the leads list existed were compared with the previous run, newer ones with the week before
-    const vs = c.leadList ? 'the previous week (made-up history)' : 'the previous report';
-    const odd = report.injected?.length ? ' · mistakes you chose are in this week’s data, so some changes look extreme' : '';
-    return { ...base, kpis: c.kpis, changes: c.changes, before: c.previousKpis ?? null, rows: runRows, campaigns: c.campaigns ?? [], report: true,
-      health: { light: c.light, warnings: c.warnings ?? [], fromRun: true },
-      leads: c.leadList ?? null, leadsTitle: `Leads in ${rangeText(r.from, r.to)}`, budget: budgetFor(c.client, period, r),
-      note: `${rangeText(r.from, r.to)} (the run’s week) · compared with ${vs}${odd}` };
-  }
-  // the current period ends with today so far, compared with its own last day up to the same time
-  const live = r.current && liveToday(c.client, now, runRows, c.leadList, r.cmp.to);
-  // today's account and Meta problems count once the day is over, except on a run day: the run has already read them
-  const runToday = runRows.find(d => d.day === today);
-  const todayRow = live && { day: today, ...live.totals, campaigns: live.campaigns, simulated: !runToday, partial: true,
-    spendGap: runToday?.spendGap ?? 0, metaMissed: runToday?.metaMissed ?? 0, metaRejected: runToday?.metaRejected ?? 0 };
-  const upTo = (from, to) => (r.current ? daySeries(c.client, from, addDays(to, -1), runRows) : daySeries(c.client, from, to, runRows));
-  const inPeriodRows = [...upTo(r.from, r.to), ...(live ? [todayRow] : [])];
-  const cmpRows = [...upTo(r.cmp.from, r.cmp.to), ...(live ? [{ day: r.cmp.to, ...live.before.totals }] : [])];
+  const f = periodFigures(c.client, { ...c, asOf: report.asOf }, period, now, back, dayVs);
+  const title = f.current ? { day: 'Today', week: 'This week', month: 'This month', year: 'This year' }[period] : rangeText(f.from, f.to);
   // a past day is charted with the two weeks up to it; today is charted by the hour
-  const rows = period === 'day' ? (live ? [] : daySeries(c.client, addDays(r.to, -13), r.to, runRows)) : inPeriodRows;
-  const kpis = kpisOf(inPeriodRows), before = kpisOf(cmpRows);
-  const asOf = r.current ? `, as of ${new Date(now).toISOString().slice(11, 16)} UTC` : '';
-  const same = r.current ? ' up to the same time' : '';
-  const p = parts(r.cmp.from);
+  const rows = period === 'day' ? (f.live ? [] : daySeries(c.client, addDays(f.to, -13), f.to, c.days ?? [])) : f.days;
+  const at = f.asOf.slice(11, 16);
+  const asOf = !f.current ? '' : f.cut ? `, up to ${at} UTC (the latest run or test lead)` : `, as of ${at} UTC`;
+  const same = f.current ? ' up to the same time' : '';
+  const p = parts(f.cmp.from);
   const cmpText = period === 'day'
-    ? `${WEEKDAYS[new Date(`${r.cmp.from}T00:00:00Z`).getUTCDay()]} ${p.d} ${MONTHS[p.m - 1]}${same} (${dayVs === 'prev' ? 'the day before' : 'same day last week'})`
-    : `${rangeText(r.cmp.from, r.cmp.to)}${same}`;
+    ? `${WEEKDAYS[new Date(`${f.cmp.from}T00:00:00Z`).getUTCDay()]} ${p.d} ${MONTHS[p.m - 1]}${same} (${dayVs === 'prev' ? 'the day before' : 'same day last week'})`
+    : `${rangeText(f.cmp.from, f.cmp.to)}${same}`;
   const madeUp = !c.days ? ' · all days are made-up history (this report has no daily figures)'
-    : [...inPeriodRows, ...rows, ...cmpRows].some(d => d.simulated) ? ' · days outside the run’s week are made-up history' : '';
-  const leads = periodLeads(c.client, r.from, r.to, runRows, c.leadList).filter(l => Date.parse(l.createdAt) < +now);
-  // data health: the run's own checks, run again on this period's leads and days
-  const warnings = periodChecks(c.client, leads, inPeriodRows), fromRun = inPeriodRows.some(d => !d.simulated);
-  const health = { light: fromRun && c.light === 'red' ? 'red' : warnings.length ? 'orange' : 'green', warnings, fromRun };
-  return { ...base, kpis, changes: pctChanges(kpis, before), before, rows, campaigns: sumCampaigns(inPeriodRows, c.client), report: false, health,
-    live: period === 'day' && live ? live : undefined, vsLabel: dayVs === 'prev' ? 'Same time the day before' : 'Same time last week',
-    highlight: period === 'day' ? r.to : undefined,
-    leads,
-    budget: budgetFor(c.client, period, r, live ? live.share : 1),
-    leadsTitle: r.current ? (period === 'day' ? 'Leads today so far' : `Leads this ${period} so far`) : `Leads ${period === 'day' ? 'on' : 'in'} ${rangeText(r.from, r.to)}`,
-    note: `${rangeText(r.from, r.to)}${r.current ? ` so far${asOf} · provisional until the ${period} ends` : ''} · compared with ${cmpText}${madeUp}` };
+    : [...f.days, ...rows, ...f.cmpDays].some(d => d.simulated) ? ' · days outside the run are made-up history' : '';
+  const odd = report.injected?.length && f.health.fromRun ? ' · mistakes you chose are in the run’s data, so some changes look extreme' : '';
+  return { from: f.from, to: f.to, current: f.current, title, earliest: f.from <= HISTORY_START,
+    kpis: f.kpis, changes: f.changes, before: f.before, rows, campaigns: f.campaigns, health: f.health, leads: f.leads,
+    words: periodWords(period, back, dayVs, f.from),
+    live: period === 'day' && f.live ? f.live : undefined, vsLabel: dayVs === 'prev' ? 'Same time the day before' : 'Same time last week',
+    highlight: period === 'day' ? f.to : undefined,
+    budget: budgetFor(c.client, period, f, f.live ? f.live.share : 1),
+    leadsTitle: f.current ? (period === 'day' ? 'Leads today so far' : `Leads this ${period} so far`) : `Leads ${period === 'day' ? 'on' : 'in'} ${rangeText(f.from, f.to)}`,
+    note: `${rangeText(f.from, f.to)}${f.current ? ` so far${asOf} · provisional until the ${period} ends` : ''} · compared with ${cmpText}${madeUp}${odd}` };
 }
 
 const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
@@ -373,8 +349,9 @@ function chartsFor(c, pv, period) {
   ];
 }
 
-function dashBody(c, problems, pv, period) {
-  // every period has cards, funnel, campaigns and charts; the week adds the AI summary, data checks and leads
+// ai: the AI summary card for this view (aiBox)
+function dashBody(c, problems, pv, period, ai) {
+  // every period has cards, funnel, campaigns, charts, the AI summary, data health and its leads
   const v = dashboardView({ ...c, kpis: pv.kpis, changes: pv.changes, before: pv.before, campaigns: pv.campaigns });
   const sim = h('small', { class: 'sim' }, 'simulated');
   const rateText = [null, 'of impressions generated clicks', 'of clicks became paid leads', c.client === 'clinic' ? 'of leads booked a consultation' : 'of leads placed an order'];
@@ -421,19 +398,36 @@ function dashBody(c, problems, pv, period) {
       // "you broke this" only where the run's own data is in the period
       hl.fromRun && problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null))) : null,
     hl.fromRun ? null : h('p', { class: 'hint' }, 'Made-up days have the odd problem planted, like a real account, for the same checks the run uses to find.'));
-  if (pv.report) {
-    out.push(h('div', { class: 'drow' },
-      h('div', { class: 'dbox ai' }, h('h4', {}, 'What happened this week'),
-        v.ai.headline ? h('p', { class: 'headline' }, v.ai.headline) : null,
-        v.ai.summary ? h('p', {}, v.ai.summary) : null,
-        v.ai.nextSteps.length ? [h('h4', {}, 'Next steps'), h('ul', {}, v.ai.nextSteps.map(n => h('li', {}, n)))] : null),
-      health));
-  } else {
-    out.push(health, h('p', { class: 'hint pfoot' }, `The AI summary covers the run’s week (${pv.runWeek}): on Week, press ‹ to go back to it.`));
-  }
-  out.push(leadsTable(c, pv));
+  out.push(h('div', { class: 'drow' }, ai, health), leadsTable(c, pv));
   // replaceChildren would print a null as the text "null"
   return out.filter(Boolean);
+}
+
+// The AI summary for the period on screen, written on request by the server for both clients at once:
+// Gemini, or the template when its answer fails the checks. entry: { state: 'loading' | 'done' | 'error', body, text }.
+function aiBox(c, pv, entry, generate) {
+  const box = h('div', { class: 'dbox ai' }, h('h4', {}, 'AI summary', h('small', { class: 'sim' }, pv.words.covers)));
+  const s = entry?.state === 'done' && entry.body.value?.clients?.find(x => x.client === c.client);
+  if (entry?.state === 'loading') box.append(h('p', { class: 'hint', role: 'status' }, 'Writing the summary… If the demo server was asleep, this can take a minute.'));
+  else if (s) {
+    const b = entry.body, at = b.current ? ` (as of ${b.asOf.slice(11, 16)} UTC)` : '';
+    // (append takes elements one by one: no lists, and a null would show as the text "null")
+    box.append(...[h('p', { class: 'headline' }, s.headline), h('p', {}, s.summary),
+      s.warnings_explained.length ? h('ul', {}, s.warnings_explained.map(t => h('li', {}, t))) : null,
+      ...(s.next_steps.length ? [h('h4', {}, 'Next steps'), h('ul', {}, s.next_steps.map(t => h('li', {}, t)))] : []),
+      h('p', { class: b.source === 'ai' ? 'hint' : 'hint partial' }, b.source === 'ai' ? `Written by Gemini${at}; every number was filled in by code.`
+        : `Written by the template${at}: ${b.why}.`)].filter(Boolean));
+  } else {
+    if (entry?.state === 'error') box.append(h('p', { class: 'partial' }, entry.text));
+    box.append(h('p', { class: 'hint' }, `Gemini writes a short summary of ${pv.words.covers}, compared with ${pv.words.vs}. It never types a number: code fills them in.`));
+  }
+  if (entry?.state !== 'loading') {
+    const broken = h('input', { type: 'checkbox' });
+    const btn = h('button', { type: 'button', class: 'csv gen' }, s ? 'Write it again' : 'Generate AI summary');
+    btn.addEventListener('click', () => generate(broken.checked));
+    box.append(h('div', { class: 'genrow' }, btn, h('label', {}, broken, ' Simulate a broken AI answer')));
+  }
+  return box;
 }
 
 // Spend against the client's budget for the period (made-up budgets), and where it should be by now.
@@ -482,6 +476,19 @@ function dashboard(report, problems) {
   // the address keeps the client, period and how far back, so a refresh or a shared link opens the same view
   const want = parseHash(location.hash);
   const state = { ci: Math.max(0, report.clients.findIndex(c => c.client === want.client)), period: want.period ?? 'week', back: want.back, dayVs: 'week' };
+  // AI summaries asked for on this visit, by view (each one covers both clients)
+  const summaries = new Map();
+  const viewKey = () => `${state.period}|${state.back}|${state.dayVs}`;
+  const generate = broken => {
+    const k = viewKey(), ask = { period: state.period, back: state.back, dayVs: state.dayVs, broken };
+    summaries.set(k, { state: 'loading' });
+    draw();
+    call('/summary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(ask) }, 120000)
+      .then(r => summaries.set(k, r.status === 200 && r.body?.value ? { state: 'done', body: r.body }
+        : { state: 'error', text: r.body?.error ?? 'The summary couldn’t be written right now. Please try again in a minute.' }))
+      .catch(() => summaries.set(k, { state: 'error', text: 'The demo server didn’t answer. Please try again in a minute.' }))
+      .finally(() => { if (body.isConnected) draw(); });
+  };
   const tabs = report.clients.map(c => h('button', { type: 'button', role: 'tab' }, h('i', { class: `ldot ${c.light}` }), c.name));
   const pbtns = PERIODS.map(([key, label]) => h('button', { type: 'button', 'data-p': key }, label));
   const draw = () => {
@@ -489,8 +496,11 @@ function dashboard(report, problems) {
     pbtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === state.period)));
     const c = report.clients[state.ci];
     history.replaceState(null, '', hashFor(c.client, state.period, state.back));
-    const pv = periodView(report, c, state.period, new Date(), state.back, state.dayVs);
-    const view = dashBody(c, problems, pv, state.period);
+    const now = new Date(), pv = periodView(report, c, state.period, now, state.back, state.dayVs);
+    const view = dashBody(c, problems, pv, state.period, aiBox(c, pv, summaries.get(viewKey()), generate));
+    // "What the AI receives" in How it works: this view's figures for both clients, built as the server builds them
+    const fig = report.clients.map(cc => ({ cc, f: periodFigures(cc.client, { ...cc, asOf: report.asOf }, state.period, now, state.back, state.dayVs) }));
+    $('#ai-in').textContent = JSON.stringify(buildAiInput(fig.map(({ cc, f }) => ({ client: cc.client, name: cc.name, kpis: f.kpis, previousKpis: f.before, warnings: f.health.warnings })), pv.words), null, 2);
     // ‹ › step through earlier periods; the current one is marked live
     const step = (label, by, off) => {
       const b = h('button', { type: 'button', class: 'stepb', 'aria-label': `${by < 0 ? 'Next' : 'Previous'} ${state.period}` }, label);
@@ -554,15 +564,16 @@ function slackBox() {
   dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
 }
 
+let leadReady = false; // the latest run is from today, so test leads can join it
 function render(report) {
   const problems = report.injected.map(i => i.problem);
-  const week = new Date(report.weekStart).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const from = dayKey(report.weekStart), to = report.asOf ? dayKey(report.asOf) : addDays(from, 6);
   // the run's notes live in the "How it works" popup, under "Latest run"
   const cs = caughtSummary(report.injected);
   const run = $('#how-run');
   run.querySelector('div').replaceChildren(h('div', {},
-    h('p', {}, h('b', {}, `Week of ${week}`), ` · ${report.overview}`),
-    report.aiSource === 'template' ? h('p', { class: 'partial' }, 'The summary was written by the template: the AI’s answer failed the checks, or the AI didn’t answer.') : null,
+    h('p', {}, h('b', {}, `Run of ${rangeText(from, to)}`), report.ranAt ? ` · made at ${report.ranAt.slice(11, 16)} UTC` : '',
+      report.testLeads ? ` · ${plural(report.testLeads, 'test lead')} sent since` : ''),
     report.partial ? h('p', { class: 'partial' }, 'Partial report: a step failed, so part of it was built without that step.') : null,
     cs ? [h('p', { class: `caughtline ${cs.cls}` }, cs.text),
       h('ul', { class: 'caught' }, report.injected.map(i => h('li', {}, h('span', {}, PROBLEM_TEXT[i.problem]?.[0] ?? i.problem),
@@ -572,10 +583,13 @@ function render(report) {
   run.hidden = false;
 
   $('#result').replaceChildren(dashboard(report, problems));
+  // test leads join a run from today
+  const lead = $('#lead');
+  leadReady = report.asOf?.slice(0, 10) === dayKey(Date.now());
+  lead.disabled = !leadReady;
+  lead.title = lead.disabled ? 'Test leads join today’s run: run the report first' : 'One more made-up customer, through GoHighLevel and Meta, for the client on screen';
   // the same code and link the server uses for the Slack message, so this is the text that was posted
   showSlack(alertText(report, 'https://ibrahim-jaafar.github.io/agency-demo/'));
-  // the server builds the AI input from these same report fields with the same code
-  $('#ai-in').textContent = JSON.stringify(buildAiInput(report.clients), null, 2);
 }
 
 async function sha256Hex(text) {
@@ -695,6 +709,27 @@ export async function boot() {
     } finally {
       btn.disabled = false;
       btn.textContent = 'Run the report';
+    }
+  });
+
+  // one more customer for the client on screen; the dashboard then shows the run with them in it
+  const lead = $('#lead');
+  lead.addEventListener('click', async () => {
+    lead.disabled = true;
+    setStage({ cls: 'running', text: 'Sending a test lead through GoHighLevel and Meta…' });
+    try {
+      const r = await call('/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ client: parseHash(location.hash).client ?? 'clinic' }) }, 60000);
+      if (r.status !== 200) setStage({ cls: 'failed', text: r.body?.error ?? 'The test lead couldn’t be sent. Please try again in a minute.' });
+      else {
+        const s = await call('/status').catch(() => null);
+        if (s?.body?.report) render(s.body.report);
+        setStage({ cls: 'done', text: testLeadText(r.body) });
+      }
+    } catch (err) {
+      console.error(err);
+      setStage({ cls: 'failed', text: 'The demo server didn’t answer. Please try again in a minute.' });
+    } finally {
+      lead.disabled = !leadReady;
     }
   });
 

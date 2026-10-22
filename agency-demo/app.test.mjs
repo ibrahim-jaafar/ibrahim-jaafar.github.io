@@ -100,11 +100,6 @@ test('an empty week shows dashes, not errors', () => {
   assert.ok(v.cards.every(c => c.change === null && c.tone === 'neutral'));
 });
 
-test('a missing AI summary gives empty text', () => {
-  assert.deepEqual(dashboardView(clinic({ summary: undefined })).ai, { headline: '', summary: '', nextSteps: [] });
-  assert.deepEqual(dashboardView(clinic()).ai, { headline: 'h', summary: 's', nextSteps: ['n1'] });
-});
-
 test('numbers without a card still show as extras', () => {
   assert.deepEqual(dashboardView(clinic()).extras.map(e => e.label), ['Paid leads', 'Cost per booking', 'Cancelled']);
   assert.deepEqual(dashboardView(store()).extras.map(e => e.label), ['Orders', 'Average order', 'Paid leads', 'Refunded']);
@@ -130,13 +125,13 @@ const st = (pairs) => pairs.map(([key, status, reason]) => (reason ? { key, stat
 
 test('toolbar shows only the current stage while running', () => {
   assert.deepEqual(stageText(st([['ghl', 'done'], ['spend', 'done'], ['meta', 'running']]), 'running', null),
-    { cls: 'running', text: 'Sending conversions to Meta… (3 of 5)' });
-  assert.deepEqual(stageText([], 'running', null), { cls: 'running', text: 'Saving the leads in GoHighLevel… (1 of 5)' });
+    { cls: 'running', text: 'Sending conversions to Meta… (3 of 4)' });
+  assert.deepEqual(stageText([], 'running', null), { cls: 'running', text: 'Saving the leads in GoHighLevel… (1 of 4)' });
 });
 
 test('toolbar sums up a finished run', () => {
   const rep = { clients: [{ warnings: [{}, {}] }, { warnings: [] }] };
-  const all = st([['ghl', 'done'], ['spend', 'done'], ['meta', 'done'], ['checks', 'done'], ['ai', 'done']]);
+  const all = st([['ghl', 'done'], ['spend', 'done'], ['meta', 'done'], ['checks', 'done']]);
   assert.deepEqual(stageText(all, 'done', rep, 34), { cls: 'warn', text: '✓ Done in 34 s · 2 warnings' });
   assert.deepEqual(stageText(all, 'done', { clients: [{ warnings: [] }] }), { cls: 'done', text: '✓ Done · all checks passed' });
   assert.deepEqual(stageText(all, 'done', { clients: [{ warnings: [{}] }] }), { cls: 'warn', text: '✓ Done · 1 warning' });
@@ -162,7 +157,7 @@ test('result strip says whether the checks caught what the visitor broke', () =>
 });
 
 test('toolbar shows how many of the visitor’s mistakes were caught', () => {
-  const all = st([['ghl', 'done'], ['spend', 'done'], ['meta', 'done'], ['checks', 'done'], ['ai', 'done']]);
+  const all = st([['ghl', 'done'], ['spend', 'done'], ['meta', 'done'], ['checks', 'done']]);
   const rep = inj => ({ clients: [{ warnings: [{}, {}, {}] }], injected: inj });
   assert.deepEqual(stageText(all, 'done', rep([{ problem: 'a', caught: true }, { problem: 'b', caught: true }, { problem: 'c', caught: true }]), 34),
     { cls: 'done', text: '✓ Done in 34 s · 3 of 3 mistakes caught' });
@@ -197,14 +192,13 @@ test('dates read like a person writes them', () => {
 });
 
 const NOW = new Date(Date.UTC(2026, 9, 22, 15)); // Thursday 22 Oct, 15:00 UTC
-test('the run’s week (one step back on Week) is the run report itself', () => {
+test('the run’s week is added up from its days like any other week', () => {
   const v = periodView(rep, storeC(), 'week', NOW, 1);
-  assert.equal(v.kpis.spend, 70);
-  assert.deepEqual(v.changes, { spend: 5 });
-  assert.equal(v.report, true);
+  assert.deepEqual(v.kpis, kpisFromTotals('store', sumDays(runRows)));
   assert.equal(v.rows.length, 7);
   assert.equal(v.rows[0].day, week);
-  assert.match(v.note, /^12–18 Oct 2026 \(the run’s week\) · compared with the previous report/);
+  assert.equal(v.health.fromRun, true);
+  assert.match(v.note, /^12–18 Oct 2026 · compared with 5–11 Oct 2026/);
 });
 
 test('earlier periods are added up from daily totals and compared fairly', () => {
@@ -213,7 +207,6 @@ test('earlier periods are added up from daily totals and compared fairly', () =>
     const r = periodRange(period, '2026-10-22', 1);
     const want = kpisFromTotals('store', sumDays(daySeries('store', r.from, r.to, runRows)));
     assert.deepEqual(v.kpis, want, period);
-    assert.equal(v.report, false);
     assert.ok(v.changes && 'spend' in v.changes, period);
   }
   assert.match(periodView(rep, storeC(), 'month', NOW, 1).note, /^1–30 Sep 2026 · compared with 1–31 Aug 2026/);
@@ -290,8 +283,8 @@ test('the note is honest about made-up days', () => {
 });
 
 test('toolbar shows the last step when every step is done but the run is still saving', () => {
-  const all = ['ghl', 'spend', 'meta', 'checks', 'ai'].map(key => ({ key, status: 'done' }));
-  assert.equal(stageText(all, 'running', null).text, 'Gemini is writing the summary… (5 of 5)');
+  const all = ['ghl', 'spend', 'meta', 'checks'].map(key => ({ key, status: 'done' }));
+  assert.equal(stageText(all, 'running', null).text, 'Checking the data… (4 of 4)');
 });
 
 // ---------- realism pass ----------
@@ -302,15 +295,8 @@ test('every period has campaign numbers', () => {
   const m = periodView(rep, storeC(), 'month', NOW, 1);
   const r = periodRange('month', '2026-10-22', 1);
   assert.deepEqual(m.campaigns, sumCampaigns(daySeries('store', r.from, r.to, runRows), 'store'));
-  assert.equal(periodView(rep, storeC({ campaigns: [{ name: 'A', spend: 1, paidLeads: 0, impressions: 1, clicks: 1 }] }), 'week', NOW, 1).campaigns[0].name, 'A');
   const live = periodView(rep, storeC(), 'day', NOW);
   assert.equal(live.campaigns.length, 3);
-});
-
-test('the week says what it is compared with', () => {
-  assert.match(periodView(rep, storeC({ leadList: [] }), 'week', NOW, 1).note, /compared with the previous week \(made-up history\)/);
-  // reports saved before the leads list existed were compared with the previous run
-  assert.match(periodView(rep, storeC(), 'week', NOW, 1).note, /compared with the previous report/);
 });
 
 test('the leads table: readable status per client, value only when it counts, newest first kept', () => {
@@ -364,7 +350,7 @@ test('when there is an earlier figure, the card says what it was', () => {
 });
 
 test('while running, the toolbar counts the seconds so a long step doesn’t look stuck', () => {
-  assert.equal(stageText([{ key: 'ghl', status: 'running' }], 'running', null, 23).text, 'Saving the leads in GoHighLevel… (1 of 5) · 23 s');
+  assert.equal(stageText([{ key: 'ghl', status: 'running' }], 'running', null, 23).text, 'Saving the leads in GoHighLevel… (1 of 4) · 23 s');
 });
 
 test('the year chart says the last month is only part of a month', () => {
@@ -392,11 +378,11 @@ test('each campaign shows its cost per paid lead', () => {
   assert.equal(none.campaigns[0].cpl, '—');
 });
 
-test('the run’s week says so, and warns when the data has chosen mistakes', () => {
-  const plain = periodView(rep, storeC({ leadList: [] }), 'week', NOW, 1);
-  assert.match(plain.note, /^12–18 Oct 2026 \(the run’s week\) · compared with the previous week/);
-  const broken = periodView({ ...rep, injected: [{ problem: 'edge_cases', caught: true }] }, storeC({ leadList: [] }), 'week', NOW, 1);
-  assert.match(broken.note, /mistakes you chose are in this week’s data, so some changes look extreme/);
+test('a period with the run’s days warns when the data has chosen mistakes', () => {
+  const broken = { ...rep, injected: [{ problem: 'edge_cases', caught: true }] };
+  assert.match(periodView(broken, storeC({ leadList: [] }), 'week', NOW, 1).note, /mistakes you chose are in the run’s data, so some changes look extreme/);
+  // a period without them doesn't
+  assert.doesNotMatch(periodView(broken, storeC({ leadList: [] }), 'week', NOW, 3).note, /mistakes/);
 });
 
 test('monthly budget pacing: spent so far against where it should be by now', () => {
@@ -477,11 +463,23 @@ test('every view has data health: the run’s checks, run again on the period’
     assert.ok(['green', 'orange', 'red'].includes(v.health.light), `${period} ${back}`);
     assert.equal(v.health.light === 'green', !v.health.warnings.length, `${period} ${back}`);
   }
-  // a made-up year has the odd planted problem; the run's week keeps the run's own warnings
+  // a made-up year has the odd planted problem
   assert.ok(periodView(rep, storeC({ leadList: [] }), 'year', NOW, 1).health.warnings.length > 0);
-  const w = [{ code: 'duplicates', count: 1, message: 'x' }];
-  assert.deepEqual(periodView(rep, storeC({ warnings: w, light: 'orange' }), 'week', NOW, 1).health, { light: 'orange', warnings: w, fromRun: true });
   // a failed run step turns a period with run days red, but not one without them
   assert.equal(periodView(rep, storeC({ leadList: [], light: 'red' }), 'month', NOW).health.light, 'red');
   assert.notEqual(periodView(rep, storeC({ leadList: [], light: 'red' }), 'month', NOW, 2).health.light, 'red');
+});
+
+test('every view names its period for the AI summary, in words', () => {
+  assert.deepEqual(periodView(rep, storeC(), 'day', NOW).words, { covers: 'today so far', vs: 'last Thursday up to the same time', finished: false });
+  assert.deepEqual(periodView(rep, storeC(), 'month', NOW, 1).words, { covers: 'in September', vs: 'the month before', finished: true });
+});
+
+test('the toolbar says what happened to a test lead', async () => {
+  const { testLeadText } = await import('./app.js');
+  assert.equal(testLeadText({ name: 'Lea S.', client: 'store', source: 'Living Room Sale', outcome: 'converted', value: 113, deal: true, meta: true }),
+    '✓ Test lead: Lea S. ordered $113.00 (Living Room Sale) · saved in GoHighLevel, sent to Meta');
+  assert.equal(testLeadText({ name: 'Dana H.', client: 'clinic', source: 'organic', outcome: 'open', value: 0, deal: null, meta: null }),
+    '✓ Test lead: Dana H. enquired (not from an ad) · saved in GoHighLevel');
+  assert.match(testLeadText({ name: 'R F.', client: 'clinic', source: null, outcome: 'converted', value: 150, deal: false, meta: false }), /no source recorded.*deal wasn’t saved.*Meta didn’t take it/);
 });

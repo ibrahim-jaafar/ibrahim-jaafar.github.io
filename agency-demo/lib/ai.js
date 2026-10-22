@@ -41,8 +41,23 @@ export function pctChanges(kpis, prev) {
   }));
 }
 
-export function buildAiInput(clients) {
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// How the summary names the period and what it is compared with: in words, never digits (the writer never types one).
+// finished: false while the period is still under way, so the summary says "so far".
+export function periodWords(period, back, dayVs, from) {
+  const d = new Date(`${from}T00:00:00Z`), wd = DAY_NAMES[d.getUTCDay()], finished = back > 0;
+  if (period === 'day') return back === 0 ? { covers: 'today so far', vs: dayVs === 'prev' ? 'yesterday up to the same time' : `last ${wd} up to the same time`, finished }
+    : { covers: back === 1 ? 'yesterday' : `on ${wd}`, vs: dayVs === 'prev' ? 'the day before' : `the ${wd} before`, finished };
+  if (period === 'week') return back === 0 ? { covers: 'this week so far', vs: 'the same days last week', finished } : { covers: back === 1 ? 'last week' : 'that week', vs: 'the week before', finished };
+  if (period === 'month') return back === 0 ? { covers: 'this month so far', vs: 'the same days last month', finished } : { covers: `in ${MONTH_NAMES[d.getUTCMonth()]}`, vs: 'the month before', finished };
+  return back === 0 ? { covers: 'this year so far', vs: 'the same days last year', finished } : { covers: back === 1 ? 'last year' : 'that year', vs: 'the year before', finished };
+}
+
+// period: periodWords(...); a report without one covers last week.
+export function buildAiInput(clients, period = { covers: 'last week', vs: 'the week before', finished: true }) {
   return {
+    period,
     clients: clients.map(c => {
       const kpis = pickKpis(c.client, c.kpis);
       const previousKpis = pickKpis(c.client, c.previousKpis);
@@ -132,7 +147,7 @@ export function placeholderGuide() {
   return [
     'Every placeholder needs its own label within a few words of it, in the same sentence, like these examples. A placeholder without its label nearby, or right after another number\'s label, makes the answer invalid.',
     ...Object.entries(LABELS).map(([k, l]) => line(k, l)),
-    'A {name_change} placeholder needs the same label as {name}, e.g. "leads were {leads_change} on the previous week" or "cost per lead was {costPerLead_change} on the previous week".',
+    'A {name_change} placeholder needs the same label as {name}, e.g. "leads were {leads_change} compared with the same days last month" or "cost per lead was {costPerLead_change} compared with last week".',
     ...Object.entries(COUNT_LABELS).map(([k, l]) => line(`${k}_count`, l)),
     'A {code_message} placeholder is the check\'s own sentence: put it on its own, e.g. "{duplicates_message}".',
   ].join('\n');
@@ -231,26 +246,27 @@ export function validateAiOutput(raw, input) {
 }
 
 const count = (n, key, one, many) => `{${key}} ${n === 1 ? one : many}`;
-const change = (ch, key) => (ch && ch[key] != null ? ` ({${key}_change} compared with the previous week)` : '');
+const change = (ch, key, vs) => (ch && ch[key] != null ? ` ({${key}_change} compared with ${vs})` : '');
 
 // The fallback summary, written with the same placeholders as the AI and checked by the same code.
 export function templateDraft(input) {
+  const { covers, vs } = input.period ?? { covers: 'last week', vs: 'the week before' };
   const clients = input.clients.map(c => {
     const k = c.kpis;
     let headline, summary;
     if (!k.leads) {
-      headline = 'No leads yet this week';
-      summary = 'No leads yet this week, with {spend} of ad spend so far.';
+      headline = `No leads ${covers}`;
+      summary = `No leads ${covers}, with {spend} of ad spend.`;
     } else if (c.client === 'clinic') {
       headline = `${count(k.leads, 'leads', 'lead', 'leads')} and ${count(k.bookings, 'bookings', 'booked consultation', 'booked consultations')}`;
-      summary = `${count(k.leads, 'leads', 'lead', 'leads')}${change(c.changes, 'leads')}, ${count(k.bookings, 'bookings', 'booked consultation', 'booked consultations')}`
+      summary = `${count(k.leads, 'leads', 'lead', 'leads')}${change(c.changes, 'leads', vs)}, ${count(k.bookings, 'bookings', 'booked consultation', 'booked consultations')}`
         + (k.bookingRate != null ? ' ({bookingRate} of leads)' : '')
         + '. Ad spend {spend}'
         + (k.costPerLead != null ? ', {costPerLead} per paid lead' : '')
         + (k.costPerBooking != null ? ', {costPerBooking} per booking' : '') + '.';
     } else {
       headline = `{revenue} revenue from ${count(k.orders, 'orders', 'order', 'orders')}`;
-      summary = `${count(k.orders, 'orders', 'order', 'orders')} and {revenue} revenue${change(c.changes, 'revenue')}. Ad spend {spend}`
+      summary = `${count(k.orders, 'orders', 'order', 'orders')} and {revenue} revenue${change(c.changes, 'revenue', vs)}. Ad spend {spend}`
         + (k.roas != null ? ', return on ad spend {roas}' : '')
         + (k.costPerOrder != null ? ', {costPerOrder} per order' : '') + '.';
     }
@@ -260,7 +276,7 @@ export function templateDraft(input) {
       headline,
       summary,
       warnings_explained: c.warnings.slice(0, 6).map(w => `{${w.code}_message}`),
-      next_steps: c.warnings.length ? ['Review the data warnings before this report goes to the client.'] : ['No action needed this week.'],
+      next_steps: c.warnings.length ? ['Review the data warnings before this report goes to the client.'] : ['No action needed.'],
     };
   });
   const flagged = input.clients.filter(c => c.warnings.length).map(c => c.name);

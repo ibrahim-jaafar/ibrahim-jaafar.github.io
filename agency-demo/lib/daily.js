@@ -1,7 +1,9 @@
 // Daily totals: the run's week split by day, made-up history for the other days, totals for any period,
 // and a live "today so far" feed. Month and year are added up from days; ratios come from the sums, never averaged.
 import { makeRng } from './rng.js';
-import { inPeriod, CAMPAIGNS, CAMPAIGN_SHARE, CONVERT_RATE, CANCEL_RATE, WEEKDAY_WEIGHT, FIRST, LAST, normalisePhone, normaliseEmail, HOUR_CURVE } from './leads.js';
+import { periodChecks } from './checks.js';
+import { pctChanges } from './ai.js';
+import { inPeriod, CAMPAIGNS, CAMPAIGN_SHARE, CONVERT_RATE, CANCEL_RATE, WEEKDAY_WEIGHT, FIRST, LAST, normalisePhone, normaliseEmail, HOUR_CURVE, shareBy } from './leads.js';
 
 const D_MS = 864e5;
 const dMoney = n => Math.round(n * 100) / 100;
@@ -38,6 +40,7 @@ function splitUnits(total, weights, scale) {
 // the week's simulated spend, impressions and clicks are spread over the days and still add up to the week.
 // meta: what Meta accepted and rejected. The account-total gap and Meta's misses are known for the whole run only,
 // so they go on its last day, the day the report read them (the dashboard's checks add them up per period).
+// A day still under way keeps its whole day's share: the dashboard's "so far" takes the part up to the moment it shows.
 export function runDays(client, leads, spend, weekStart, meta = null) {
   const start = dayKey(weekStart);
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
@@ -204,12 +207,6 @@ export function leadList(leads, weekStart) {
   return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-// The week before the run's week, from the same daily figures the dashboard's other views use.
-export function previousWeekKpis(client, weekStart) {
-  const start = dayKey(weekStart);
-  return kpisFromTotals(client, sumDays(daySeries(client, addDays(start, -7), addDays(start, -1))));
-}
-
 // Every day from `from` to `to`: the run's real days where there are some, made-up history for the rest.
 export function daySeries(client, from, to, runRows = []) {
   const byDay = new Map(runRows.map(d => [d.day, d]));
@@ -263,10 +260,6 @@ export function periodRange(period, today, back = 0) {
 
 // The live day builds up hour by hour on the same curve the made-up leads arrive by.
 const HOUR_SUM = dSum(HOUR_CURVE, w => w);
-function shareBy(hours) {
-  const h = Math.min(24, Math.max(0, hours)), whole = Math.floor(h);
-  return (dSum(HOUR_CURVE.slice(0, whole), w => w) + (whole < 24 ? HOUR_CURVE[whole] * (h - whole) : 0)) / HOUR_SUM;
-}
 function upTo(full, share) {
   const t = Object.fromEntries(FIELDS.map(f => [f, Math.round(full[f] * share)]));
   t.spend = dMoney(full.spend * share);
@@ -313,4 +306,31 @@ export function liveToday(client, now, runRows = [], runLeads = null, cmpDay = n
     campaigns: fc.map((c, i) => ({ name: c.name, spend: cs.spend[i], impressions: cs.impressions[i], clicks: cs.clicks[i], paidLeads: cs.paidLeads[i] })),
     before: { day: weekAgo, totals: soFar(before, peopleBefore, startBefore, hoursNow), hours: hoursUpTo(before, peopleBefore, startBefore, hoursNow) },
   };
+}
+
+// What one client's period adds up to: the current one so far (back = 0) or a whole earlier one, and what it is
+// compared with. Totals come from days (the run's real days plus made-up history). Today counts up to now, or on a
+// run day up to the run's latest data (run.asOf): after a run nothing more arrives on its own.
+// run: the report's { days, leadList, light, asOf }. The dashboard and the server's AI summary both use this.
+export function periodFigures(client, run, period, now, back = 0, dayVs = 'week') {
+  const runRows = run.days ?? [], today = dayKey(now);
+  const r = periodRange(period, today, back);
+  // Day is compared with the same weekday a week before (weekends are quieter), or with the day before if asked
+  if (period === 'day' && dayVs === 'prev') r.cmp = { from: addDays(r.from, -1), to: addDays(r.from, -1) };
+  const runToday = runRows.find(d => d.day === today);
+  const asOf = new Date(runToday && run.asOf ? Math.min(+now, Date.parse(run.asOf)) : +now);
+  const live = r.current ? liveToday(client, asOf, runRows, run.leadList, r.cmp.to) : null;
+  // today's account and Meta problems count once the day is over, except on a run day: the run has already read them
+  const todayRow = live && { day: today, ...live.totals, campaigns: live.campaigns, simulated: !runToday, partial: true,
+    spendGap: runToday?.spendGap ?? 0, metaMissed: runToday?.metaMissed ?? 0, metaRejected: runToday?.metaRejected ?? 0 };
+  const whole = (from, to) => daySeries(client, from, r.current ? addDays(to, -1) : to, runRows);
+  const days = [...whole(r.from, r.to), ...(live ? [todayRow] : [])];
+  const cmpDays = [...whole(r.cmp.from, r.cmp.to), ...(live ? [{ day: r.cmp.to, ...live.before.totals }] : [])];
+  const kpis = kpisFromTotals(client, sumDays(days)), before = kpisFromTotals(client, sumDays(cmpDays));
+  const leads = periodLeads(client, r.from, r.to, runRows, run.leadList).filter(l => Date.parse(l.createdAt) < +asOf);
+  // data health: the run's own checks, run again on this period's leads and days
+  const warnings = periodChecks(client, leads, days), fromRun = days.some(d => !d.simulated);
+  return { ...r, asOf: asOf.toISOString(), cut: +asOf < +now, live, days, cmpDays, kpis, before, changes: pctChanges(kpis, before),
+    campaigns: sumCampaigns(days, client), leads,
+    health: { light: fromRun && run.light === 'red' ? 'red' : warnings.length ? 'orange' : 'green', warnings, fromRun } };
 }

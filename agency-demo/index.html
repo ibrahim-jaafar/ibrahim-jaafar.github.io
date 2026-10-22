@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Agency Report Demo · Ibrahim Jaafar</title>
-<meta name="description" content="A weekly marketing report for two agency clients: leads, ad spend, Meta conversions, data checks and a plain-language summary. Try it with clean or deliberately flawed data.">
+<meta name="description" content="A marketing dashboard for two agency clients: leads, ad spend, Meta conversions, data checks and a plain-language AI summary for any period. Try it with clean or deliberately flawed data.">
 <meta property="og:title" content="Agency report automation · demo">
 <meta property="og:description" content="Pick clean or flawed data, run the report, and see what the checks catch.">
 <meta property="og:image" content="https://ibrahim-jaafar.github.io/img/photo.jpg">
@@ -105,6 +105,8 @@ h2{font-size:22px;margin:0 0 14px}
 .dbox li small{color:#1d4ed8;font-weight:600}
 .dbox .hint{color:var(--d-muted)}
 .dbox.ai{background:#eef4ff;border-left:4px solid #2563eb}
+.genrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin-top:10px}
+.genrow label{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--d-muted);cursor:pointer}
 .dbox .light{color:var(--d-text);margin-bottom:6px}
 .headline{font-weight:600}
 .funnel{list-style:none;margin:0;padding:0}
@@ -139,6 +141,9 @@ td small{color:var(--warn)}
 .tfield select{font:inherit;font-size:14px;color:var(--text);background:#14172a;border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer}
 .tfield select:focus-visible{outline:2px solid var(--a2);outline-offset:2px}
 .tbar .btn{padding:7px 16px;font-size:14px;border-radius:9px;box-shadow:0 4px 16px rgba(92,120,255,.3)}
+.btn2{font:inherit;font-size:14px;font-weight:600;padding:6px 14px;border-radius:9px;border:1px solid rgba(124,92,255,.65);background:transparent;color:var(--text);cursor:pointer}
+.btn2:disabled{opacity:.45;cursor:default}
+.btn2:focus-visible{outline:2px solid var(--a2);outline-offset:2px}
 .stage{flex:1 1 220px;display:flex;align-items:center;gap:9px;margin:0;font-size:13.5px;min-width:0}
 .stage span{overflow-wrap:anywhere}
 .stage.done span{color:var(--good)}.stage.warn span{color:var(--warn)}.stage.failed span{color:var(--bad)}
@@ -178,7 +183,7 @@ td small{color:var(--warn)}
 .help:hover .q{filter:brightness(1.12)}
 .help:focus-visible .q{outline:2px solid var(--a3);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.help.ping .q::before,.help.ping .q::after,.how[open],.how.leaving{animation:none}}
-@media (max-width:560px){.tbar{position:static}.tfield,.tbar .btn{flex:1 1 100%}.tfield select{flex:1}}
+@media (max-width:560px){.tbar{position:static}.tfield,.tbar .btn,.tbar .btn2{flex:1 1 100%}.tfield select{flex:1}}
 
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .dhead h3 small{font:500 13px Inter,system-ui,sans-serif;opacity:.85;margin-left:12px}
@@ -287,6 +292,7 @@ td.void{text-decoration:line-through;color:var(--d-muted)}
       </select>
     </label>
     <button class="btn" id="run" type="button">Run the report</button>
+    <button class="btn2" id="lead" type="button" disabled title="Test leads join today’s run: run the report first">Send a test lead</button>
     <p class="stage" id="stage" role="status"><i class="dot"></i><span></span></p>
     <fieldset class="problems" id="problems" hidden>
       <legend>Tick the mistakes to put in the data:</legend>
@@ -308,12 +314,13 @@ td.void{text-decoration:line-through;color:var(--d-muted)}
 <dialog class="how" id="how" aria-labelledby="how-t">
   <button class="close" type="button" aria-label="Close">✕</button>
   <h2 id="how-t">How this demo works</h2>
-  <p class="how-lead">A weekly marketing report for two made-up agency clients, a skin clinic and a home-goods store, built as a live n8n workflow: it saves the leads in GoHighLevel, checks the data, sends conversions to Meta, and Gemini writes the summary.</p>
+  <p class="how-lead">A marketing report for two made-up agency clients, a skin clinic and a home-goods store, built as live n8n workflows: a run saves the last 7 days of leads in GoHighLevel, sends conversions to Meta and checks the data; Gemini writes a summary of any period on request.</p>
   <ul class="how-points">
-    <li><b>Live, end to end:</b> each run saves leads in a GoHighLevel sandbox, sends conversions to Meta, checks the data and asks Gemini for the summary.</li>
+    <li><b>Live, end to end:</b> each run saves the last 7 days of leads in a GoHighLevel sandbox, reads them back, sends conversions to Meta and checks the data.</li>
     <li><b>Checks in plain code:</b> duplicates, missing sources, totals that don’t add up and more are caught by code, not AI.</li>
     <li><b>Break it yourself:</b> pick “Choose problems”, run it, and see what the checks catch.</li>
-    <li><b>AI kept honest:</b> Gemini never types a number. Code fills in every figure.</li>
+    <li><b>AI on request, kept honest:</b> press Generate AI summary on any view. Gemini never types a number; code fills in every figure.</li>
+    <li><b>Watch one arrive:</b> after a run, Send a test lead pushes one more customer through GoHighLevel and Meta, and today’s numbers move.</li>
     <li><b>Day, week, month and year:</b> each opens on today, this week, month or year so far, updating live; ‹ › step back to earlier ones.</li>
   </ul>
   <button class="btn" id="how-go" type="button">Try it: run the report</button>
@@ -322,21 +329,22 @@ td.void{text-decoration:line-through;color:var(--d-muted)}
 
   <h3 class="how-more">Full details</h3>
   <details><summary>What’s real and what’s made up</summary><div>
-    <p><b>Live:</b> an n8n workflow on a free server. Each run saves the leads and deals in a GoHighLevel sandbox (two sub-accounts), sends the conversions to Meta’s Conversions API (a demo dataset that runs no ads), runs the data checks, and asks Gemini to write the summary. Gemini never types a number: it writes placeholders and the code fills in the real values. If its answer breaks a rule, a template writes the summary instead.</p>
+    <p><b>Live:</b> n8n workflows on a free server. Each run makes the leads of the last 7 days, up to the moment you press Run (Meta takes conversions up to 7 days old), saves them and their deals in a GoHighLevel sandbox (two sub-accounts), reads them back, sends the conversions to Meta’s Conversions API (a demo dataset that runs no ads) and runs the data checks. <b>Generate AI summary</b> asks the server for a summary of the period on screen: it works the figures out itself from the latest run, so the page sends no numbers or text, and Gemini writes with placeholders that code fills in with the real values. If its answer breaks a rule, a template writes the summary instead; tick “Simulate a broken AI answer” to see that happen.</p>
     <p><b>Made up:</b> the two clients, their leads, the ad spend, impressions and clicks, and the mistakes you choose. The demo data can contain mistakes on purpose: that is what the checks are for.</p>
   </div></details>
   <details><summary>Day, week, month and year</summary><div>
     <p>Each period opens on the one running now: <b>today</b>, <b>this week</b>, <b>this month</b> or <b>this year</b> so far. These refresh every 30 seconds and stay provisional until the period ends; they are compared with the same stretch before, up to the same time of day. <b>‹ ›</b> step back to whole earlier periods.</p>
     <p>Day is compared with the same day a week before, since weekends are quieter than weekdays (a switch compares it with the day before instead); Week with the week before; Month and Year with the same days of last month or last year.</p>
-    <p>Everything is added up from daily totals; costs and rates are worked out again from the sums, never averaged. The run’s own week (press ‹ on Week) is the run’s report: the CRM data, the data checks and the AI summary. Days outside it are made-up history, generated the same way every time and with the same rates as the run’s own week, so the periods compare fairly.</p>
+    <p>Everything is added up from daily totals; costs and rates are worked out again from the sums, never averaged. The run’s 7 days come from the CRM; on the day of a run, today stops at the moment of the run, since nothing more comes in on its own, until <b>Send a test lead</b> adds a customer (one every few seconds, up to 30 a run). Days outside the run are made-up history, generated the same way every time and with the same rates as a run, so the periods compare fairly.</p>
+    <p><b>Data health</b> runs the run’s own checks on whatever period is on screen. The made-up history has the odd problem planted, like a real account: a lead with no source, someone enquiring twice, a huge order, an account total that’s off, a conversion Meta never got.</p>
     <p>Every view shows spend against a made-up budget (a monthly budget, shared out by day for Day and Week), with a line where spend should be by now.</p>
     <p>Every view shows the campaigns, the charts and the list of leads behind its numbers, and <b>Download CSV</b> saves its numbers day by day (hour by hour for today). The address keeps the client, the period and how far back you stepped, so a link opens the same view.</p>
   </div></details>
   <details><summary>The workflow, step by step</summary><div><ol class="how-steps" id="how-steps"></ol></div></details>
   <details><summary>The mistakes you can put in the data</summary><div><ul id="how-problems"></ul></div></details>
-  <details><summary>What the AI receives (totals only, never names, phones or emails)</summary><div><pre id="ai-in">Run the report, or wait for the latest one to load.</pre></div></details>
+  <details><summary>What the AI receives for the view on screen (totals only, never names, phones or emails)</summary><div><pre id="ai-in">Run the report, or wait for the latest one to load.</pre></div></details>
   <details><summary>What Meta receives: one example event (personal fields SHA-256 hashed)</summary><div><pre id="meta-out"></pre></div></details>
-  <details><summary>Limits</summary><div><p>The free server sleeps when nobody uses it, so the first run of the day can take a minute to start. One run at a time, at most one a minute.</p></div></details>
+  <details><summary>Limits</summary><div><p>The free server sleeps when nobody uses it, so the first run of the day can take a minute to start. One run at a time, at most one a minute. AI summaries are kept and reused (a period still under way for an hour); after 40 new ones in a day, the template writes them.</p></div></details>
   <p class="how-foot"><a href="../#agents">← Ibrahim Jaafar · portfolio</a></p>
 </dialog>
 
