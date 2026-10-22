@@ -6,6 +6,7 @@ import { generateLeads } from './lib/leads.js';
 import { buildMetaEvents } from './lib/meta.js';
 import { buildAiInput, pctChanges } from './lib/ai.js';
 import { alertText } from './lib/report.js';
+import { periodChecks } from './lib/checks.js';
 import { chart } from './charts.js';
 import { dayKey, addDays, daySeries, sumDays, sumCampaigns, kpisFromTotals, periodRange, liveToday, periodLeads } from './lib/daily.js';
 
@@ -168,12 +169,16 @@ export function periodView(report, c, period, now = new Date(), back = 0, dayVs 
     const vs = c.leadList ? 'the previous week (made-up history)' : 'the previous report';
     const odd = report.injected?.length ? ' · mistakes you chose are in this week’s data, so some changes look extreme' : '';
     return { ...base, kpis: c.kpis, changes: c.changes, before: c.previousKpis ?? null, rows: runRows, campaigns: c.campaigns ?? [], report: true,
+      health: { light: c.light, warnings: c.warnings ?? [], fromRun: true },
       leads: c.leadList ?? null, leadsTitle: `Leads in ${rangeText(r.from, r.to)}`, budget: budgetFor(c.client, period, r),
       note: `${rangeText(r.from, r.to)} (the run’s week) · compared with ${vs}${odd}` };
   }
   // the current period ends with today so far, compared with its own last day up to the same time
   const live = r.current && liveToday(c.client, now, runRows, c.leadList, r.cmp.to);
-  const todayRow = live && { day: today, ...live.totals, campaigns: live.campaigns, simulated: !runRows.some(d => d.day === today), partial: true };
+  // today's account and Meta problems count once the day is over, except on a run day: the run has already read them
+  const runToday = runRows.find(d => d.day === today);
+  const todayRow = live && { day: today, ...live.totals, campaigns: live.campaigns, simulated: !runToday, partial: true,
+    spendGap: runToday?.spendGap ?? 0, metaMissed: runToday?.metaMissed ?? 0, metaRejected: runToday?.metaRejected ?? 0 };
   const upTo = (from, to) => (r.current ? daySeries(c.client, from, addDays(to, -1), runRows) : daySeries(c.client, from, to, runRows));
   const inPeriodRows = [...upTo(r.from, r.to), ...(live ? [todayRow] : [])];
   const cmpRows = [...upTo(r.cmp.from, r.cmp.to), ...(live ? [{ day: r.cmp.to, ...live.before.totals }] : [])];
@@ -188,10 +193,14 @@ export function periodView(report, c, period, now = new Date(), back = 0, dayVs 
     : `${rangeText(r.cmp.from, r.cmp.to)}${same}`;
   const madeUp = !c.days ? ' · all days are made-up history (this report has no daily figures)'
     : [...inPeriodRows, ...rows, ...cmpRows].some(d => d.simulated) ? ' · days outside the run’s week are made-up history' : '';
-  return { ...base, kpis, changes: pctChanges(kpis, before), before, rows, campaigns: sumCampaigns(inPeriodRows, c.client), report: false,
+  const leads = periodLeads(c.client, r.from, r.to, runRows, c.leadList).filter(l => Date.parse(l.createdAt) < +now);
+  // data health: the run's own checks, run again on this period's leads and days
+  const warnings = periodChecks(c.client, leads, inPeriodRows), fromRun = inPeriodRows.some(d => !d.simulated);
+  const health = { light: fromRun && c.light === 'red' ? 'red' : warnings.length ? 'orange' : 'green', warnings, fromRun };
+  return { ...base, kpis, changes: pctChanges(kpis, before), before, rows, campaigns: sumCampaigns(inPeriodRows, c.client), report: false, health,
     live: period === 'day' && live ? live : undefined, vsLabel: dayVs === 'prev' ? 'Same time the day before' : 'Same time last week',
     highlight: period === 'day' ? r.to : undefined,
-    leads: periodLeads(c.client, r.from, r.to, runRows, c.leadList).filter(l => Date.parse(l.createdAt) < +now),
+    leads,
     budget: budgetFor(c.client, period, r, live ? live.share : 1),
     leadsTitle: r.current ? (period === 'day' ? 'Leads today so far' : `Leads this ${period} so far`) : `Leads ${period === 'day' ? 'on' : 'in'} ${rangeText(r.from, r.to)}`,
     note: `${rangeText(r.from, r.to)}${r.current ? ` so far${asOf} · provisional until the ${period} ends` : ''} · compared with ${cmpText}${madeUp}` };
@@ -405,18 +414,22 @@ function dashBody(c, problems, pv, period) {
     h('div', { class: 'drow' }, funnel, campaigns),
     h('div', { class: 'charts' }, chartsFor(c, pv, period).map(ch => h('div', { class: 'dbox' }, ch))),
   ];
+  const hl = pv.health;
+  const health = h('div', { class: 'dbox' }, h('h4', {}, 'Data health'),
+    h('span', { class: `light ${hl.light}` }, h('i'), LIGHT_TEXT[hl.light] ?? ''),
+    hl.warnings.length ? h('ul', {}, hl.warnings.map(w => h('li', {}, w.message,
+      // "you broke this" only where the run's own data is in the period
+      hl.fromRun && problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null))) : null,
+    hl.fromRun ? null : h('p', { class: 'hint' }, 'Made-up days have the odd problem planted, like a real account, for the same checks the run uses to find.'));
   if (pv.report) {
     out.push(h('div', { class: 'drow' },
       h('div', { class: 'dbox ai' }, h('h4', {}, 'What happened this week'),
         v.ai.headline ? h('p', { class: 'headline' }, v.ai.headline) : null,
         v.ai.summary ? h('p', {}, v.ai.summary) : null,
         v.ai.nextSteps.length ? [h('h4', {}, 'Next steps'), h('ul', {}, v.ai.nextSteps.map(n => h('li', {}, n)))] : null),
-      h('div', { class: 'dbox' }, h('h4', {}, 'Data health'),
-        h('span', { class: `light ${v.light}` }, h('i'), LIGHT_TEXT[v.light] ?? ''),
-        v.warnings.length ? h('ul', {}, v.warnings.map(w => h('li', {}, w.message,
-          problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null))) : null)));
+      health));
   } else {
-    out.push(h('p', { class: 'hint pfoot' }, `The AI summary and the data checks cover the run’s week (${pv.runWeek}): on Week, press ‹ to go back to it.`));
+    out.push(health, h('p', { class: 'hint pfoot' }, `The AI summary covers the run’s week (${pv.runWeek}): on Week, press ‹ to go back to it.`));
   }
   out.push(leadsTable(c, pv));
   // replaceChildren would print a null as the text "null"

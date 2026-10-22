@@ -470,3 +470,18 @@ test('Day says which day it is compared with, and can compare with the day befor
   // the switch only changes Day
   assert.equal(periodView(rep, storeC(), 'month', NOW, 0, 'prev').note, periodView(rep, storeC(), 'month', NOW).note);
 });
+
+test('every view has data health: the run’s checks, run again on the period’s leads and days', () => {
+  for (const period of ['day', 'week', 'month', 'year']) for (const back of [0, 1, 2]) {
+    const v = periodView(rep, storeC({ leadList: [] }), period, NOW, back);
+    assert.ok(['green', 'orange', 'red'].includes(v.health.light), `${period} ${back}`);
+    assert.equal(v.health.light === 'green', !v.health.warnings.length, `${period} ${back}`);
+  }
+  // a made-up year has the odd planted problem; the run's week keeps the run's own warnings
+  assert.ok(periodView(rep, storeC({ leadList: [] }), 'year', NOW, 1).health.warnings.length > 0);
+  const w = [{ code: 'duplicates', count: 1, message: 'x' }];
+  assert.deepEqual(periodView(rep, storeC({ warnings: w, light: 'orange' }), 'week', NOW, 1).health, { light: 'orange', warnings: w, fromRun: true });
+  // a failed run step turns a period with run days red, but not one without them
+  assert.equal(periodView(rep, storeC({ leadList: [], light: 'red' }), 'month', NOW).health.light, 'red');
+  assert.notEqual(periodView(rep, storeC({ leadList: [], light: 'red' }), 'month', NOW, 2).health.light, 'red');
+});

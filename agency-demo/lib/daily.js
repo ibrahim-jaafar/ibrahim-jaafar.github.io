@@ -36,7 +36,9 @@ function splitUnits(total, weights, scale) {
 
 // The run's 7 days. Leads, conversions and revenue come from the CRM leads by the day they came in;
 // the week's simulated spend, impressions and clicks are spread over the days and still add up to the week.
-export function runDays(client, leads, spend, weekStart) {
+// meta: what Meta accepted and rejected. The account-total gap and Meta's misses are known for the whole run only,
+// so they go on its last day, the day the report read them (the dashboard's checks add them up per period).
+export function runDays(client, leads, spend, weekStart, meta = null) {
   const start = dayKey(weekStart);
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i));
   const rng = makeRng(seedOf(`${client}:${start}`));
@@ -46,11 +48,17 @@ export function runDays(client, leads, spend, weekStart) {
   // each campaign's week is shared out over the days; a day's totals are the sum of its campaigns
   const camps = spend.campaigns.map(c => ({ name: c.name, spend: splitUnits(c.spend, w, 100), impressions: splitUnits(c.impressions || 0, wi, 1), clicks: splitUnits(c.clicks || 0, wc, 1) }));
   const inWeek = leads.filter(l => inPeriod(l, weekStart));
+  const allConv = inWeek.filter(l => l.outcome === 'converted').length;
+  const last = {
+    spendGap: dMoney(spend.reportedTotal - dSum(spend.campaigns, c => c.spend)),
+    metaMissed: meta ? allConv - meta.accepted : 0, metaRejected: meta ? meta.rejected : 0,
+  };
   return days.map((day, i) => {
     const ls = inWeek.filter(l => dayKey(l.createdAt) === day);
     const conv = ls.filter(l => l.outcome === 'converted');
     const campaigns = camps.map(c => ({ name: c.name, spend: c.spend[i], impressions: c.impressions[i], clicks: c.clicks[i], paidLeads: ls.filter(l => l.source === c.name).length }));
     return {
+      ...(i === 6 ? last : { spendGap: 0, metaMissed: 0, metaRejected: 0 }),
       day,
       leads: ls.length,
       paidLeads: ls.filter(l => l.source !== 'organic').length,
@@ -103,6 +111,21 @@ function historyDraw(client, day) {
   const ws = CAMPAIGN_SHARE[client].map(x => x * (0.8 + r() * 0.4)), wk = ws.map(x => x * (0.85 + r() * 0.3));
   const parts = { spend: splitUnits(row.spend, ws, 100), clicks: splitUnits(row.clicks, wk, 1), impressions: splitUnits(row.impressions, wk.map(x => x * (0.9 + r() * 0.2)), 1), paidLeads: splitUnits(row.paidLeads, ws, 1) };
   row.campaigns = CAMPAIGNS[client].map((name, i) => ({ name, spend: parts.spend[i], impressions: parts.impressions[i], clicks: parts.clicks[i], paidLeads: parts.paidLeads[i] }));
+  // Now and then, the problems a real account has, for the dashboard's checks to find: a lead whose source the CRM
+  // lost, the same person enquiring twice, a huge store order, an account total that's off, conversions that never
+  // reached Meta or that Meta refused. Their own random numbers, so the day's other figures stay as they were.
+  const q = makeRng(seedOf(`${client}:${day}:issues`));
+  const slots = row.campaigns.flatMap((c, k) => Array(c.paidLeads).fill(k));
+  picks.filter(p => p.paid).forEach((p, j) => {
+    p.camp = slots[j];
+    if (q() < 0.03) { p.lost = true; row.campaigns[p.camp].paidLeads--; }
+  });
+  picks.forEach((p, i) => { if (i && p.outcome === 'open' && q() < 0.04) p.dupeOf = Math.floor(q() * i); });
+  const won = picks.filter(p => p.outcome === 'converted');
+  if (client === 'store') for (const p of won) if (q() < 0.015) { const big = 2000 + Math.floor(q() * 2000); row.revenue += big - p.value; p.value = big; }
+  row.spendGap = q() < 1 / 60 ? dMoney((q() < 0.5 ? -1 : 1) * row.spend * (0.05 + q() * 0.15)) : 0;
+  row.metaMissed = won.filter(() => q() < 0.04).length;
+  row.metaRejected = q() < 1 / 90 ? 1 : 0;
   return { row, picks };
 }
 
@@ -120,18 +143,27 @@ function timeAt(q) {
 // campaigns, outcomes and values). Each arrives at a random time on the hourly curve; Live counts who has
 // come in by now, so its numbers, list and hours always agree.
 export function historyLeads(client, day) {
-  const { row, picks } = historyDraw(client, day);
+  const { picks } = historyDraw(client, day);
   const r = makeRng(seedOf(`${client}:${day}:people`)), h = HIST[client];
-  const sources = row.campaigns.flatMap(c => Array(c.paidLeads).fill(c.name));
-  const people = picks.map(p => ({ ...p, source: p.paid ? sources.shift() : 'organic' }));
   const start = Date.parse(`${day}T00:00:00Z`);
-  return people.map(p => ({
+  const people = picks.map(p => ({
     name: `${FIRST[Math.floor(r() * FIRST.length)]} ${LAST[Math.floor(r() * LAST.length)][0]}.`,
-    source: p.source, outcome: p.outcome,
+    source: !p.paid ? 'organic' : p.lost ? null : CAMPAIGNS[client][p.camp],
+    outcome: p.outcome,
     value: p.outcome === 'cancelled' ? h.value(r) : p.value, // what the cancelled booking or refunded order was worth
     createdAt: new Date(start + Math.floor(timeAt(r()) * 3600) * 1000).toISOString(),
     duplicate: false,
-  })).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }));
+  // a second enquiry from someone who already came in that day: same person, marked like the run's duplicates
+  picks.forEach((p, i) => {
+    if (p.dupeOf === undefined) return;
+    const a = people[p.dupeOf], b = people[i];
+    // the repeat comes second
+    if (b.createdAt < a.createdAt) [a.createdAt, b.createdAt] = [b.createdAt, a.createdAt];
+    b.name = a.name;
+    b.duplicate = true;
+  });
+  return people.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 // Everyone who came in from `from` to `to`, newest first: the run's leads on its days, made-up people on the others.
