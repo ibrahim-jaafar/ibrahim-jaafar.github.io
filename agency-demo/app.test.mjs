@@ -327,7 +327,8 @@ test('the address keeps the client and period, and ignores anything odd', () => 
 });
 
 // ---------- user walkthrough fixes ----------
-import { pacing, csvName } from './app.js';
+import { pacing, budgetFor, csvName } from './app.js';
+import { smoothPath } from './charts.js';
 
 test('when there is an earlier figure, the card says what it was', () => {
   const v = dashboardView(clinic({ kpis: { ...clinic().kpis, costPerLead: null }, changes: { costPerLead: null }, before: { costPerLead: 27.81, bookingRate: 0.1429 } }));
@@ -374,9 +375,43 @@ test('the week says it is the last full week, and warns when the data has chosen
 });
 
 test('monthly budget pacing: spent so far against where it should be by today', () => {
-  assert.deepEqual(pacing(400, 800, '2026-10-20'), { spent: '$400.00', budget: '$800.00', pct: 50, expectedPct: 65, status: 'under', text: '50% of the $800.00 monthly budget spent, 65% of the month gone' });
-  assert.equal(pacing(700, 800, '2026-10-20').status, 'over');
-  assert.equal(pacing(520, 800, '2026-10-20').status, 'on track');
+  const b = budgetFor('clinic', 'month', '2026-10-20');
+  assert.deepEqual(pacing(400, b), { spent: '$400.00', budget: '$800.00', pct: 50, expectedPct: 65, status: 'under', text: '50% of the $800.00 monthly budget spent, 65% of the month gone' });
+  assert.equal(pacing(700, b).status, 'over');
+  assert.equal(pacing(520, b).status, 'on track');
+});
+
+test('every period has a budget: a day is a 365th of the year, a week seven days, the year twelve months', () => {
+  assert.deepEqual(budgetFor('clinic', 'day', '2026-10-20'), { amount: 26.3, word: 'Daily', expectedPct: 100, due: null });
+  assert.equal(budgetFor('clinic', 'week', '2026-10-18').amount, 184.11);
+  assert.equal(budgetFor('store', 'year', '2026-10-20').amount, 8400);
+  assert.equal(budgetFor('store', 'year', '2026-10-20').expectedPct, 80);
+  assert.equal(budgetFor('store', 'live', '2026-10-21', 0.25).expectedPct, 25);
+  assert.equal(pacing(26.3, budgetFor('clinic', 'day', '2026-10-20')).text, '100% of the $26.30 daily budget spent');
+  for (const period of ['day', 'week', 'month', 'year', 'live']) assert.ok(periodView(rep, storeC(), period, '2026-10-21').budget.amount > 0, period);
+});
+
+test('every period lists its leads, and the list matches the leads card', () => {
+  for (const period of ['day', 'month', 'year', 'live']) {
+    const v = periodView(rep, storeC({ leadList: [] }), period, '2026-10-21', new Date(Date.UTC(2026, 9, 21, 15)));
+    assert.equal(v.leads.length, v.kpis.leads, period);
+    assert.ok(v.leadsTitle.startsWith('Leads'), period);
+  }
+  assert.equal(periodView(rep, storeC({ leadList: [] }), 'month', '2026-10-21').leadsTitle, 'Leads this month');
+  assert.equal(periodView(rep, storeC({ leadList: [] }), 'day', '2026-10-21').leadsTitle, 'Leads on 20 Oct 2026');
+});
+
+test('smooth lines pass through every point and never overshoot them', () => {
+  const pts = [[0, 50], [10, 10], [20, 10], [30, 80], [40, 60]];
+  const d = smoothPath(pts);
+  for (const [x, y] of pts.slice(1)) assert.ok(d.includes(`${x.toFixed(1)},${y.toFixed(1)}`));
+  // every control point stays between its segment's two ends, so the curve can't leave them
+  const nums = d.slice(1).split(/[MC ]/).filter(Boolean).map(p => p.split(',').map(Number));
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [lo, hi] = [Math.min(pts[i][1], pts[i + 1][1]), Math.max(pts[i][1], pts[i + 1][1])];
+    for (const c of nums.slice(1 + i * 3, 3 + i * 3)) assert.ok(c[1] >= lo - 1e-9 && c[1] <= hi + 1e-9, `segment ${i}: ${c}`);
+  }
+  assert.equal(smoothPath([[0, 1], [5, 2]]), 'M0.0,1.0L5.0,2.0');
 });
 
 test('CSV file names are plain and say what they hold', () => {

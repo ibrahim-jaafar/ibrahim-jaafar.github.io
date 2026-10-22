@@ -26,6 +26,23 @@ function niceMax(v, whole) {
   return 4 * Math.max(whole ? 1 : 0, step);
 }
 
+// A smooth line through the points that never overshoots them (monotone cubic, as in d3's curveMonotoneX),
+// so a curve can't dip below zero or show a peak that isn't in the data.
+export function smoothPath(pts) {
+  const f = n => n.toFixed(1), n = pts.length;
+  if (n < 3) return pts.map(([px, py], i) => `${i ? 'L' : 'M'}${f(px)},${f(py)}`).join('');
+  const dx = [], m = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = pts[i + 1][0] - pts[i][0]; m[i] = (pts[i + 1][1] - pts[i][1]) / dx[i]; }
+  const t = pts.map((_, i) => (i === 0 ? m[0] : i === n - 1 ? m[n - 2]
+    : m[i - 1] * m[i] <= 0 ? 0 : (3 * (dx[i - 1] + dx[i])) / ((2 * dx[i] + dx[i - 1]) / m[i - 1] + (dx[i] + 2 * dx[i - 1]) / m[i])));
+  let d = `M${f(pts[0][0])},${f(pts[0][1])}`;
+  for (let i = 0; i < n - 1; i++) {
+    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], h = dx[i] / 3;
+    d += `C${f(x0 + h)},${f(y0 + t[i] * h)} ${f(x1 - h)},${f(y1 - t[i + 1] * h)} ${f(x1)},${f(y1)}`;
+  }
+  return d;
+}
+
 // series: [{ key, label, color }]; kind 'line' or 'bar'; fmt(value) for axis and tooltip
 // whole: counts, so the axis steps are whole numbers
 // tipFmt: the tooltip's exact value (the axis can round, e.g. $3.4k)
@@ -86,13 +103,14 @@ export function chart({ title, points, series, kind = 'line', fmt = String, tipF
     });
   } else {
     for (const s of series) {
-      let d = '', pen = false;
+      // a gap (no figure) breaks the line; each unbroken run is drawn as one smooth curve
+      const runs = [[]];
       points.forEach((p, i) => {
         const v = p[s.key];
-        if (typeof v !== 'number') { pen = false; return; }
-        d += `${pen ? 'L' : 'M'}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
-        pen = true;
+        if (typeof v !== 'number') { if (runs.at(-1).length) runs.push([]); return; }
+        runs.at(-1).push([x(i), y(v)]);
       });
+      const d = runs.filter(r => r.length).map(smoothPath).join('');
       svg.append(el('path', { d, fill: 'none', stroke: s.color, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
       if (points.length === 1 || highlight) points.forEach((p, i) => {
         if (typeof p[s.key] === 'number' && (points.length === 1 || p.key === highlight)) svg.append(el('circle', { cx: x(i), cy: y(p[s.key]), r: 4, fill: s.color, stroke: '#fff', 'stroke-width': 2 }));

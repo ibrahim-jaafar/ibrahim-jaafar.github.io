@@ -1,21 +1,29 @@
 // Made-up demo leads for the two fictional clients, with optional deliberate flaws.
 const DAY_MS = 864e5;
-const FIRST = ['Sara', 'Omar', 'Lina', 'Karim', 'Maya', 'Rami', 'Nour', 'Hadi', 'Yara', 'Fadi', 'Dana', 'Ziad', 'Rita', 'Joe', 'Lea'];
-const LAST = ['Haddad', 'Khoury', 'Saleh', 'Nassar', 'Aoun', 'Fares', 'Daher', 'Chami', 'Mansour', 'Rizk', 'Karam', 'Tannous'];
+export const FIRST = ['Sara', 'Omar', 'Lina', 'Karim', 'Maya', 'Rami', 'Nour', 'Hadi', 'Yara', 'Fadi', 'Dana', 'Ziad', 'Rita', 'Joe', 'Lea'];
+export const LAST = ['Haddad', 'Khoury', 'Saleh', 'Nassar', 'Aoun', 'Fares', 'Daher', 'Chami', 'Mansour', 'Rizk', 'Karam', 'Tannous'];
 export const CAMPAIGNS = {
   clinic: ['Botox Spring', 'Laser Hair Removal', 'Skin Consultation'],
   store: ['Living Room Sale', 'New Arrivals', 'Retargeting'],
 };
-const CONVERT_RATE = { clinic: 0.3, store: 0.25 };
+// how the paid leads split over the campaigns (the made-up history uses the same shares)
+export const CAMPAIGN_SHARE = { clinic: [0.45, 0.33, 0.22], store: [0.4, 0.25, 0.35] };
+export const CONVERT_RATE = { clinic: 0.3, store: 0.25 };
+export const CANCEL_RATE = 0.04;
+// the week starts on Monday; weekends are quieter
+export const WEEKDAY_WEIGHT = [1.08, 1.08, 1.08, 1.08, 1.08, 0.7, 0.7];
+const pickWeighted = (rng, ws) => {
+  let u = rng() * ws.reduce((a, w) => a + w, 0), i = 0;
+  while (u > ws[i] && i < ws.length - 1) u -= ws[i++];
+  return i;
+};
 const CONSULT_FEE = 150;
 // How enquiries spread over the day (UTC hours): quiet at night, busy late morning and evening.
 export const HOUR_CURVE = [1, 0.6, 0.4, 0.3, 0.3, 0.5, 1, 2, 3.5, 5, 6, 6.5, 6, 6, 5.5, 5.5, 6, 6.5, 7, 7, 6, 4.5, 3, 2];
-const CURVE_SUM = HOUR_CURVE.reduce((a, w) => a + w, 0);
-// A moment in the week: any day, an hour picked by the daily curve, any minute.
+// A moment in the week: a day (weekends quieter), an hour picked by the daily curve, any minute.
 function leadTime(rng, weekStart) {
-  const day = Math.floor(rng() * 7);
-  let u = rng() * CURVE_SUM, hour = 0;
-  while (u > HOUR_CURVE[hour] && hour < 23) u -= HOUR_CURVE[hour++];
+  const day = pickWeighted(rng, WEEKDAY_WEIGHT);
+  const hour = pickWeighted(rng, HOUR_CURVE);
   return new Date(+weekStart + day * DAY_MS + hour * 36e5 + Math.floor(rng() * 3600) * 1000).toISOString();
 }
 
@@ -60,7 +68,7 @@ export function generateLeads(client, problems, rng, weekStart) {
   const orderValue = () => (client === 'clinic' ? CONSULT_FEE : between(80, 300));
   const make = (n) => {
     const first = pick(FIRST), last = pick(LAST);
-    const converted = rng() < CONVERT_RATE[client];
+    const u = rng(), converted = u < CONVERT_RATE[client], cancelled = !converted && u < CONVERT_RATE[client] + CANCEL_RATE;
     const national = `7${between(0, 9)}${String(between(0, 999999)).padStart(6, '0')}`;
     return {
       id: uid(),
@@ -68,15 +76,17 @@ export function generateLeads(client, problems, rng, weekStart) {
       lastName: last,
       email: `${first}.${last}.${n}${between(10, 99)}@example.com`.toLowerCase(),
       phone: `+961 ${national.slice(0, 2)} ${national.slice(2, 5)} ${national.slice(5)}`,
-      source: rng() < 0.15 ? 'organic' : pick(CAMPAIGNS[client]),
+      source: rng() < 0.15 ? 'organic' : CAMPAIGNS[client][pickWeighted(rng, CAMPAIGN_SHARE[client])],
       createdAt: leadTime(rng, weekStart),
-      outcome: converted ? 'converted' : 'open',
-      value: converted ? orderValue() : 0,
+      outcome: converted ? 'converted' : cancelled ? 'cancelled' : 'open',
+      value: converted || cancelled ? orderValue() : 0,
       flags: [],
     };
   };
 
-  const leads = Array.from({ length: between(6, 12) }, (_, i) => make(i));
+  // edge cases bring their own leads (5 for the clinic, 9 for the store, in the week): fewer ordinary ones,
+  // so the week stays about as busy as any other
+  const leads = Array.from({ length: Math.max(2, between(6, 12) - (edge ? (client === 'store' ? 9 : 5) : 0)) }, (_, i) => make(i));
 
   if (problems.includes('missing_source')) {
     const k = between(1, 3);

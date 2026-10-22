@@ -7,7 +7,7 @@ import { buildMetaEvents } from './lib/meta.js';
 import { buildAiInput, pctChanges } from './lib/ai.js';
 import { alertText } from './lib/report.js';
 import { chart } from './charts.js';
-import { dayKey, addDays, daySeries, sumDays, sumCampaigns, kpisFromTotals, periodRange, liveToday } from './lib/daily.js';
+import { dayKey, addDays, daySeries, sumDays, sumCampaigns, kpisFromTotals, periodRange, liveToday, periodLeads } from './lib/daily.js';
 
 const API = 'https://agency-report-demo.onrender.com/webhook/demo';
 const FIRST_CALL_MS = 8000, WAKE_RETRY_MS = 5000, WAKE_MAX_MS = 120000, POLL_MS = 1500, RUN_MAX_MS = 180000;
@@ -159,16 +159,20 @@ export function periodView(report, c, period, today, now = new Date()) {
     // reports saved before the leads list existed were compared with the previous run, newer ones with the week before
     const vs = c.leadList ? 'the previous week (made-up history)' : 'the previous report';
     const odd = report.injected?.length ? ' · mistakes you chose are in this week’s data, so some changes look extreme' : '';
-    return { kpis: c.kpis, changes: c.changes, before: c.previousKpis ?? null, rows: runRows, campaigns: c.campaigns ?? [], report: true,
+    const to = addDays(weekStart, 6);
+    return { kpis: c.kpis, changes: c.changes, before: c.previousKpis ?? null, rows: runRows, campaigns: c.campaigns ?? [], report: true, to,
+      leads: c.leadList ?? null, leadsTitle: 'Leads this week', budget: budgetFor(c.client, 'week', to),
       note: `Week of ${rangeText(weekStart, weekStart)} (last full Monday to Sunday) · compared with ${vs}${odd}` };
   }
   if (period === 'live') {
-    const live = liveToday(c.client, now, runRows);
+    const live = liveToday(c.client, now, runRows, c.leadList);
     const asOf = new Date(now).toISOString().slice(11, 16);
     const kpis = kpisFromTotals(c.client, { ...live.totals, days: 1 });
     const before = kpisFromTotals(c.client, { ...live.lastWeek.totals, days: 1 });
     const weekday = WEEKDAYS[new Date(`${live.day}T00:00:00Z`).getUTCDay()];
-    return { kpis, changes: pctChanges(kpis, before), before, rows: [], campaigns: live.campaigns, report: false, live, note: `Today so far, as of ${asOf} UTC · provisional until the day closes · compared with the same time last ${weekday} · made-up live feed` };
+    return { kpis, changes: pctChanges(kpis, before), before, rows: [], campaigns: live.campaigns, report: false, live,
+      leads: live.leads, leadsTitle: 'Leads today so far', budget: budgetFor(c.client, 'live', live.day, live.share),
+      note: `Today so far, as of ${asOf} UTC · provisional until the day closes · compared with the same time last ${weekday} · made-up live feed` };
   }
   const r = periodRange(period, today, weekStart);
   const rows = daySeries(c.client, period === 'day' ? addDays(r.to, -13) : r.from, r.to, runRows);
@@ -178,6 +182,8 @@ export function periodView(report, c, period, today, now = new Date()) {
   const madeUp = !c.days ? ' · all days are made-up history (this report has no daily figures)'
     : [...rows, ...cmpRows].some(d => d.simulated) ? ' · days outside the run’s week are made-up history' : '';
   return { kpis, changes: pctChanges(kpis, before), before, rows, campaigns: sumCampaigns(inPeriodRows, c.client), report: false, to: r.to, highlight: period === 'day' ? r.to : undefined,
+    leads: periodLeads(c.client, r.from, r.to, runRows, c.leadList), budget: budgetFor(c.client, period, r.to),
+    leadsTitle: period === 'day' ? `Leads on ${rangeText(r.from, r.to)}` : `Leads this ${period}`,
     note: `${rangeText(r.from, r.to)} · compared with ${rangeText(r.cmp.from, r.cmp.to)}${madeUp}` };
 }
 
@@ -223,13 +229,31 @@ export function leadsView(list, client) {
   }));
 }
 
-// Monthly budget pacing (made-up budgets): how much is spent against how much of the month has gone.
+// Budget pacing (made-up monthly budgets): how much is spent against how much should be by now.
+// A day gets a 365th of the year's budget, a week seven days' worth, the year twelve months.
 export const BUDGETS = { clinic: 800, store: 700 };
-export function pacing(spend, budget, upTo) {
-  const p = parts(upTo), days = new Date(Date.UTC(p.y, p.m, 0)).getUTCDate();
-  const pct = Math.round((spend / budget) * 100), expectedPct = Math.round((p.d / days) * 100);
-  const status = pct > expectedPct + 10 ? 'over' : pct < expectedPct - 10 ? 'under' : 'on track';
-  return { spent: fmt(spend, 'usd'), budget: fmt(budget, 'usd'), pct, expectedPct, status, text: `${pct}% of the ${fmt(budget, 'usd')} monthly budget spent, ${expectedPct}% of the month gone` };
+const BUDGET_WORD = { day: 'Daily', week: 'Weekly', month: 'Monthly', year: 'Yearly', live: 'Daily' };
+export function budgetFor(client, period, to, liveShare = 1) {
+  const month = BUDGETS[client], daily = (month * 12) / 365, p = parts(to);
+  const cents = n => Math.round(n * 100) / 100, word = BUDGET_WORD[period];
+  if (period === 'month') {
+    const days = new Date(Date.UTC(p.y, p.m, 0)).getUTCDate();
+    return { amount: month, word, expectedPct: Math.round((p.d / days) * 100), due: 'of the month gone' };
+  }
+  if (period === 'year') {
+    const day = (Date.parse(`${to}T00:00:00Z`) - Date.UTC(p.y, 0, 1)) / 864e5 + 1, days = p.y % 4 ? 365 : 366;
+    return { amount: month * 12, word, expectedPct: Math.round((day / days) * 100), due: 'of the year gone' };
+  }
+  // live: spend follows the day's usual hours, so "by now" is the share a usual day has spent by this time
+  if (period === 'live') return { amount: cents(daily), word, expectedPct: Math.round(liveShare * 100), due: 'of a usual day’s spend due by now' };
+  return { amount: cents(period === 'week' ? daily * 7 : daily), word, expectedPct: 100, due: null };
+}
+export function pacing(spend, b) {
+  const pct = Math.round((spend / b.amount) * 100);
+  const status = pct > b.expectedPct + 10 ? 'over' : pct < b.expectedPct - 10 ? 'under' : 'on track';
+  const budget = fmt(b.amount, 'usd');
+  return { spent: fmt(spend, 'usd'), budget, pct, expectedPct: b.expectedPct, status,
+    text: `${pct}% of the ${budget} ${b.word.toLowerCase()} budget spent${b.due ? `, ${b.expectedPct}% ${b.due}` : ''}` };
 }
 
 const SLUGS = { clinic: 'lumiere-skin-clinic', store: 'northwind-home' };
@@ -337,9 +361,11 @@ function dashBody(c, problems, pv, period) {
   // every period has cards, funnel, campaigns and charts; the week adds the AI summary, data checks and leads
   const v = dashboardView({ ...c, kpis: pv.kpis, changes: pv.changes, before: pv.before, campaigns: pv.campaigns });
   const sim = h('small', { class: 'sim' }, 'simulated');
+  const rateText = [null, 'of impressions generated clicks', 'of clicks became paid leads', c.client === 'clinic' ? 'of leads booked a consultation' : 'of leads placed an order'];
   const funnel = h('div', { class: 'dbox' }, h('h4', {}, 'Funnel'),
     h('ol', { class: 'funnel' }, v.funnel.map((f, i) => h('li', { style: `--w:${100 - i * 16}%` },
-      f.rate && f.rate !== '—' ? h('small', {}, i === 2 ? `${f.rate} of clicks became paid leads` : `${f.rate} of the step above`) : null,
+      // with no rate (nothing to divide by) the line stays, empty, so the steps keep their spacing
+      i ? h('small', f.rate && f.rate !== '—' ? {} : { 'aria-hidden': 'true' }, f.rate && f.rate !== '—' ? `${f.rate} ${rateText[i]}` : ' ') : null,
       h('div', {}, h('b', {}, f.value), ` ${f.label}`, f.simulated ? sim.cloneNode(true) : null)))));
   const campaigns = h('div', { class: 'dbox' }, h('h4', {}, 'Campaigns: spend and paid leads', h('small', { class: 'sim' }, 'spend simulated')),
     v.campaigns.length ? h('ul', { class: 'camps' }, v.campaigns.map(x => h('li', {},
@@ -368,7 +394,7 @@ function dashBody(c, problems, pv, period) {
       h('span', {}, x.label), h('b', {}, x.value),
       h('div', { class: 'dmeta' }, h('em', { class: x.tone }, x.change ?? 'no earlier figure'), x.simulated ? sim.cloneNode(true) : null)))),
     h('p', { class: 'extras' }, v.extras.map(e => h('span', {}, `${e.label}: `, h('b', {}, e.value)))),
-    period === 'month' ? pacingBox(c, pv) : null,
+    pacingBox(pv),
     h('div', { class: 'drow' }, funnel, campaigns),
     h('div', { class: 'charts' }, chartsFor(c, pv, period).map(ch => h('div', { class: 'dbox' }, ch))),
   ];
@@ -382,31 +408,33 @@ function dashBody(c, problems, pv, period) {
         h('span', { class: `light ${v.light}` }, h('i'), LIGHT_TEXT[v.light] ?? ''),
         v.warnings.length ? h('ul', {}, v.warnings.map(w => h('li', {}, w.message,
           problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null))) : null)));
-    out.push(leadsTable(c));
   } else {
-    out.push(h('p', { class: 'hint pfoot' }, 'The AI summary, the data checks and the list of leads cover the run’s week: switch to Week to see them.'));
+    out.push(h('p', { class: 'hint pfoot' }, 'The AI summary and the data checks cover the run’s week: switch to Week to see them.'));
   }
-  return out;
+  out.push(leadsTable(c, pv));
+  // replaceChildren would print a null as the text "null"
+  return out.filter(Boolean);
 }
 
-// Month view: spend against the client's monthly budget (made-up budgets), and where it should be by now.
-function pacingBox(c, pv) {
-  const p = pacing(pv.kpis.spend ?? 0, BUDGETS[c.client], pv.to);
+// Spend against the client's budget for the period (made-up budgets), and where it should be by now.
+function pacingBox(pv) {
+  const p = pacing(pv.kpis.spend ?? 0, pv.budget);
   const word = { over: 'Spending faster than planned', under: 'Spending slower than planned', 'on track': 'On track' }[p.status];
+  const by = pv.budget.due ? ` with ${p.expectedPct}% ${pv.budget.due}. The line marks where spend should be by now.` : '. The line marks the full budget.';
   return h('div', { class: `dbox pacing ${p.status.replace(' ', '-')}` },
-    h('div', { class: 'pace-head' }, h('h4', {}, 'Monthly budget', h('small', { class: 'sim' }, 'made-up budget')), h('span', { class: 'pace-tag' }, word)),
+    h('div', { class: 'pace-head' }, h('h4', {}, `${pv.budget.word} budget`, h('small', { class: 'sim' }, 'made-up budget')), h('span', { class: 'pace-tag' }, word)),
     h('div', { class: 'pace-bar', role: 'img', 'aria-label': p.text }, h('i', { style: `width:${Math.min(100, p.pct)}%` }), h('b', { style: `left:${Math.min(100, p.expectedPct)}%` })),
-    h('p', { class: 'hint' }, `${p.spent} of ${p.budget} spent: ${p.pct}% of the budget with ${p.expectedPct}% of the month gone. The line marks where spend should be by now.`));
+    h('p', { class: 'hint' }, `${p.spent} of ${p.budget} spent: ${p.pct}% of the budget${by}`));
 }
 
-// The week's leads: the 10 newest, with a button for the rest.
+// The period's leads: the 10 newest, with a button for the rest.
 const LEADS_SHOWN = 10;
-function leadsTable(c) {
-  const rows = leadsView(c.leadList, c.client);
-  const box = h('div', { class: 'dbox leads-box' }, h('h4', {}, `Leads this week (${rows.length})`,
+function leadsTable(c, pv) {
+  const rows = leadsView(pv.leads, c.client);
+  const box = h('div', { class: 'dbox leads-box' }, h('h4', {}, `${pv.leadsTitle} (${rows.length})`,
     h('small', { class: 'sim' }, 'made-up people')));
-  if (!c.leadList) { box.append(h('p', { class: 'hint' }, 'This older report has no list of leads. Run the report to see it.')); return box; }
-  if (!rows.length) { box.append(h('p', { class: 'hint' }, 'No leads this week.')); return box; }
+  if (!pv.leads) { box.append(h('p', { class: 'hint' }, 'This older report has no list of leads. Run the report to see it.')); return box; }
+  if (!rows.length) { box.append(h('p', { class: 'hint' }, pv.live ? 'No leads yet today.' : 'No leads in this period.')); return box; }
   const tbody = h('tbody');
   const fill = all => tbody.replaceChildren(...rows.slice(0, all ? rows.length : LEADS_SHOWN).map(r => h('tr', {},
     h('td', {}, r.date), h('td', {}, r.name, r.duplicate ? h('small', { class: 'dupe', title: 'Same person, phone or email written differently' }, 'duplicate') : null),
