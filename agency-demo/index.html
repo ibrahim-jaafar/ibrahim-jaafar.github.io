@@ -231,6 +231,11 @@ td small{color:var(--warn)}
 /* realism pass: period bar, CSV, leads table, loading */
 .pbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px;margin:0 2px 10px}
 .pbar .pnote{margin:0}
+.stepper{flex-basis:100%;display:flex;align-items:center;gap:8px}
+.stepb{font:inherit;font-size:17px;line-height:1;width:30px;height:30px;border:1px solid var(--d-line);border-radius:50%;background:#fff;color:#1d4ed8;cursor:pointer}
+.stepb:disabled{opacity:.35;cursor:default}
+.stepb:focus-visible{outline:2px solid #1d4ed8;outline-offset:1px}
+.steptitle{display:flex;align-items:center;gap:7px;font-weight:600;font-size:15px}
 .vs{display:flex;align-items:center;gap:4px;font-size:12.5px;color:var(--d-muted)}
 .vs span{margin-right:4px}
 .vs button{font:inherit;font-size:12.5px;font-weight:600;color:#1d4ed8;background:#fff;border:1px solid var(--d-line);border-radius:99px;padding:3px 10px;cursor:pointer}
@@ -309,7 +314,7 @@ td.void{text-decoration:line-through;color:var(--d-muted)}
     <li><b>Checks in plain code:</b> duplicates, missing sources, totals that don’t add up and more are caught by code, not AI.</li>
     <li><b>Break it yourself:</b> pick “Choose problems”, run it, and see what the checks catch.</li>
     <li><b>AI kept honest:</b> Gemini never types a number. Code fills in every figure.</li>
-    <li><b>Day, week, month, year and live:</b> switch the dashboard’s period to see the numbers added up from daily totals.</li>
+    <li><b>Day, week, month and year:</b> each opens on today, this week, month or year so far, updating live; ‹ › step back to earlier ones.</li>
   </ul>
   <button class="btn" id="how-go" type="button">Try it: run the report</button>
 
@@ -320,12 +325,12 @@ td.void{text-decoration:line-through;color:var(--d-muted)}
     <p><b>Live:</b> an n8n workflow on a free server. Each run saves the leads and deals in a GoHighLevel sandbox (two sub-accounts), sends the conversions to Meta’s Conversions API (a demo dataset that runs no ads), runs the data checks, and asks Gemini to write the summary. Gemini never types a number: it writes placeholders and the code fills in the real values. If its answer breaks a rule, a template writes the summary instead.</p>
     <p><b>Made up:</b> the two clients, their leads, the ad spend, impressions and clicks, and the mistakes you choose. The demo data can contain mistakes on purpose: that is what the checks are for.</p>
   </div></details>
-  <details><summary>Day, week, month, year and live</summary><div>
-    <p><b>Week</b> is the run’s report: the CRM data, the data checks and the AI summary, compared with the week before. Each run also saves its week day by day and per campaign.</p>
-    <p><b>Day, Month and Year</b> are added up from daily totals; costs and rates are worked out again from the sums, never averaged. Day is yesterday against the same day a week before, since weekends are quieter than weekdays (a switch compares it with the day before instead); Month and Year run to yesterday and are compared with the same days of last month or last year. Days outside the run’s week are made-up history, generated the same way every time and with the same rates as the run’s own week, so the periods compare fairly.</p>
-    <p>Every view shows spend against a made-up budget (a monthly budget, shared out by day for Day, Week and Live), with a line where spend should be by now.</p>
-    <p>Every view shows the campaigns, the charts and the list of leads behind its numbers, and <b>Download CSV</b> saves its numbers day by day (hour by hour for Live). The address keeps the client and period, so a link opens the same view.</p>
-    <p><b>Live</b> is today so far, refreshed every 30 seconds and provisional until the day closes, against the same time last week. It is a made-up feed; a real client’s live numbers would come from GoHighLevel webhooks and Meta’s hourly spend.</p>
+  <details><summary>Day, week, month and year</summary><div>
+    <p>Each period opens on the one running now: <b>today</b>, <b>this week</b>, <b>this month</b> or <b>this year</b> so far. These refresh every 30 seconds and stay provisional until the period ends; they are compared with the same stretch before, up to the same time of day. <b>‹ ›</b> step back to whole earlier periods.</p>
+    <p>Day is compared with the same day a week before, since weekends are quieter than weekdays (a switch compares it with the day before instead); Week with the week before; Month and Year with the same days of last month or last year.</p>
+    <p>Everything is added up from daily totals; costs and rates are worked out again from the sums, never averaged. The run’s own week (press ‹ on Week) is the run’s report: the CRM data, the data checks and the AI summary. Days outside it are made-up history, generated the same way every time and with the same rates as the run’s own week, so the periods compare fairly.</p>
+    <p>Every view shows spend against a made-up budget (a monthly budget, shared out by day for Day and Week), with a line where spend should be by now.</p>
+    <p>Every view shows the campaigns, the charts and the list of leads behind its numbers, and <b>Download CSV</b> saves its numbers day by day (hour by hour for today). The address keeps the client, the period and how far back you stepped, so a link opens the same view.</p>
   </div></details>
   <details><summary>The workflow, step by step</summary><div><ol class="how-steps" id="how-steps"></ol></div></details>
   <details><summary>The mistakes you can put in the data</summary><div><ul id="how-problems"></ul></div></details>

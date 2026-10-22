@@ -182,7 +182,7 @@ test('result strip says so when none of the chosen mistakes applied', () => {
 
 // ---------- periods and charts ----------
 import { periodView, chartPoints, rangeText } from './app.js';
-import { runDays, daySeries, sumDays, kpisFromTotals, periodRange, historyDay } from './lib/daily.js';
+import { runDays, daySeries, sumDays, kpisFromTotals, periodRange, historyDay, liveToday, addDays } from './lib/daily.js';
 
 const week = '2026-10-12';
 const runRows = runDays('store', [], { campaigns: [{ name: 'A', spend: 70, paidLeads: 0, impressions: 7000, clicks: 70 }] }, new Date(`${week}T00:00:00Z`));
@@ -196,45 +196,67 @@ test('dates read like a person writes them', () => {
   assert.equal(rangeText('2025-12-29', '2026-01-04'), '29 Dec 2025 – 4 Jan 2026');
 });
 
-test('the week view is the run report itself', () => {
-  const v = periodView(rep, storeC(), 'week', '2026-10-21');
+const NOW = new Date(Date.UTC(2026, 9, 22, 15)); // Thursday 22 Oct, 15:00 UTC
+test('the run’s week (one step back on Week) is the run report itself', () => {
+  const v = periodView(rep, storeC(), 'week', NOW, 1);
   assert.equal(v.kpis.spend, 70);
   assert.deepEqual(v.changes, { spend: 5 });
   assert.equal(v.report, true);
   assert.equal(v.rows.length, 7);
   assert.equal(v.rows[0].day, week);
-  assert.match(v.note, /Week of 12 Oct 2026 \(last full Monday to Sunday\) · compared with the previous report/);
+  assert.match(v.note, /^12–18 Oct 2026 \(the run’s week\) · compared with the previous report/);
 });
 
-test('day, month and year are added up from daily totals and compared fairly', () => {
+test('earlier periods are added up from daily totals and compared fairly', () => {
   for (const period of ['day', 'month', 'year']) {
-    const v = periodView(rep, storeC(), period, '2026-10-21');
-    const r = periodRange(period, '2026-10-21', week);
+    const v = periodView(rep, storeC(), period, NOW, 1);
+    const r = periodRange(period, '2026-10-22', 1);
     const want = kpisFromTotals('store', sumDays(daySeries('store', r.from, r.to, runRows)));
     assert.deepEqual(v.kpis, want, period);
     assert.equal(v.report, false);
     assert.ok(v.changes && 'spend' in v.changes, period);
   }
-  assert.match(periodView(rep, storeC(), 'month', '2026-10-21').note, /^1–20 Oct 2026 · compared with 1–20 Sep 2026/);
-  // the month includes the run's real days
-  const m = periodView(rep, storeC(), 'month', '2026-10-21');
+  assert.match(periodView(rep, storeC(), 'month', NOW, 1).note, /^1–30 Sep 2026 · compared with 1–31 Aug 2026/);
+  // the current month includes the run's real days
+  const m = periodView(rep, storeC(), 'month', NOW);
   assert.equal(m.rows.find(d => d.day === week).spend, runRows[0].spend);
   assert.match(m.note, /made-up history/);
 });
 
-test('the day view charts the two weeks up to that day', () => {
-  const v = periodView(rep, storeC(), 'day', '2026-10-21');
+test('an earlier day charts the two weeks up to that day', () => {
+  const v = periodView(rep, storeC(), 'day', NOW, 1);
   assert.equal(v.rows.length, 14);
-  assert.equal(v.rows.at(-1).day, '2026-10-20');
-  assert.equal(v.highlight, '2026-10-20');
+  assert.equal(v.rows.at(-1).day, '2026-10-21');
+  assert.equal(v.highlight, '2026-10-21');
+  assert.equal(v.live, undefined);
 });
 
-test('live is today so far, against the same time last week', () => {
-  const now = new Date(Date.UTC(2026, 9, 21, 15, 0));
-  const v = periodView(rep, storeC(), 'live', '2026-10-21', now);
-  assert.equal(v.live.day, '2026-10-21');
+test('Day opens on today so far, against the same time last week', () => {
+  const v = periodView(rep, storeC(), 'day', NOW);
+  assert.equal(v.live.day, '2026-10-22');
+  assert.equal(v.title, 'Today');
   assert.equal(v.kpis.leads, v.live.totals.leads);
-  assert.match(v.note, /Today so far.*15:00 UTC.*compared with the same time last Wednesday/);
+  assert.match(v.note, /^22 Oct 2026 so far, as of 15:00 UTC · provisional until the day ends · compared with Thursday 15 Oct up to the same time \(same day last week\)/);
+});
+
+test('the current week, month and year end with today so far, against the same stretch up to the same time', () => {
+  for (const period of ['week', 'month', 'year']) {
+    const v = periodView(rep, storeC(), period, NOW), r = periodRange(period, '2026-10-22');
+    const live = liveToday('store', NOW, runRows, undefined, r.cmp.to);
+    const want = sumDays([...daySeries('store', r.from, '2026-10-21', runRows), live.totals]);
+    assert.deepEqual(v.kpis, kpisFromTotals('store', want), period);
+    const before = sumDays([...daySeries('store', r.cmp.from, addDays(r.cmp.to, -1), runRows), live.before.totals]);
+    assert.deepEqual(v.before, kpisFromTotals('store', before), period);
+    assert.equal(v.rows.at(-1).partial, true, period);
+    assert.ok(v.current && v.title.startsWith('This'), period);
+  }
+  assert.match(periodView(rep, storeC(), 'week', NOW).note, /^19–22 Oct 2026 so far, as of 15:00 UTC · provisional until the week ends · compared with 12–15 Oct 2026 up to the same time/);
+  assert.equal(chartPoints(periodView(rep, storeC(), 'month', NOW).rows, 'month').at(-1).label, '22 Oct (so far)');
+});
+
+test('history has a start: the arrow stops there', () => {
+  assert.equal(periodView(rep, storeC(), 'year', NOW, 1).earliest, true);
+  assert.equal(periodView(rep, storeC(), 'year', NOW).earliest, false);
 });
 
 test('chart points: one per day, or one per month for the year', () => {
@@ -254,17 +276,17 @@ test('a change from 0 says "was 0", not "no earlier figure"', () => {
   const v = dashboardView(clinic({ kpis: { ...clinic().kpis, bookings: 2 }, changes: { bookings: null, leads: null }, before: { bookings: 0 } }));
   assert.equal(v.cards.find(c => c.key === 'bookings').change, 'was 0');
   assert.equal(v.cards.find(c => c.key === 'leads').change, null);
-  const pv = periodView(rep, storeC(), 'day', '2026-10-21');
+  const pv = periodView(rep, storeC(), 'day', NOW, 1);
   assert.ok(pv.before && typeof pv.before.spend === 'number');
 });
 
 test('the note is honest about made-up days', () => {
   const old = storeC({ days: undefined });
-  assert.match(periodView(rep, old, 'month', '2026-10-21').note, /all days are made-up history \(this report has no daily figures\)/);
+  assert.match(periodView(rep, old, 'month', NOW).note, /all days are made-up history \(this report has no daily figures\)/);
   // every day of the period is real, but the comparison is made up
   const june = { weekStart: '2026-06-01T00:00:00.000Z' };
   const realJune = runDays('store', [], { campaigns: [{ name: 'A', spend: 70, paidLeads: 0, impressions: 7000, clicks: 70 }] }, new Date('2026-06-01T00:00:00Z'));
-  assert.match(periodView(june, storeC({ days: realJune }), 'month', '2026-06-08').note, /made-up history/);
+  assert.match(periodView(june, storeC({ days: realJune }), 'month', new Date(Date.UTC(2026, 5, 8, 12))).note, /made-up history/);
 });
 
 test('toolbar shows the last step when every step is done but the run is still saving', () => {
@@ -277,18 +299,18 @@ import { leadsView, csvFor, parseHash, hashFor } from './app.js';
 import { sumCampaigns } from './lib/daily.js';
 
 test('every period has campaign numbers', () => {
-  const m = periodView(rep, storeC(), 'month', '2026-10-21');
-  const r = periodRange('month', '2026-10-21', week);
+  const m = periodView(rep, storeC(), 'month', NOW, 1);
+  const r = periodRange('month', '2026-10-22', 1);
   assert.deepEqual(m.campaigns, sumCampaigns(daySeries('store', r.from, r.to, runRows), 'store'));
-  assert.equal(periodView(rep, storeC({ campaigns: [{ name: 'A', spend: 1, paidLeads: 0, impressions: 1, clicks: 1 }] }), 'week', '2026-10-21').campaigns[0].name, 'A');
-  const live = periodView(rep, storeC(), 'live', '2026-10-21', new Date(Date.UTC(2026, 9, 21, 15)));
+  assert.equal(periodView(rep, storeC({ campaigns: [{ name: 'A', spend: 1, paidLeads: 0, impressions: 1, clicks: 1 }] }), 'week', NOW, 1).campaigns[0].name, 'A');
+  const live = periodView(rep, storeC(), 'day', NOW);
   assert.equal(live.campaigns.length, 3);
 });
 
 test('the week says what it is compared with', () => {
-  assert.match(periodView(rep, storeC({ leadList: [] }), 'week', '2026-10-21').note, /compared with the previous week \(made-up history\)/);
+  assert.match(periodView(rep, storeC({ leadList: [] }), 'week', NOW, 1).note, /compared with the previous week \(made-up history\)/);
   // reports saved before the leads list existed were compared with the previous run
-  assert.match(periodView(rep, storeC(), 'week', '2026-10-21').note, /compared with the previous report/);
+  assert.match(periodView(rep, storeC(), 'week', NOW, 1).note, /compared with the previous report/);
 });
 
 test('the leads table: readable status per client, value only when it counts, newest first kept', () => {
@@ -319,11 +341,14 @@ test('CSV export: a header and one line per day, numbers as plain values', () =>
 });
 
 test('the address keeps the client and period, and ignores anything odd', () => {
-  assert.deepEqual(parseHash('#client=store&period=month'), { client: 'store', period: 'month' });
-  assert.deepEqual(parseHash('#period=live'), { client: null, period: 'live' });
-  assert.deepEqual(parseHash('#client=<script>&period=decade'), { client: null, period: null });
-  assert.deepEqual(parseHash(''), { client: null, period: null });
+  assert.deepEqual(parseHash('#client=store&period=month&back=2'), { client: 'store', period: 'month', back: 2 });
+  // older links to Live open today on Day
+  assert.deepEqual(parseHash('#period=live'), { client: null, period: 'day', back: 0 });
+  assert.deepEqual(parseHash('#client=<script>&period=decade&back=-3'), { client: null, period: null, back: 0 });
+  assert.deepEqual(parseHash('#back=1.5'), { client: null, period: null, back: 0 });
+  assert.deepEqual(parseHash(''), { client: null, period: null, back: 0 });
   assert.equal(hashFor('clinic', 'week'), '#client=clinic&period=week');
+  assert.equal(hashFor('clinic', 'week', 1), '#client=clinic&period=week&back=1');
 });
 
 // ---------- user walkthrough fixes ----------
@@ -367,38 +392,45 @@ test('each campaign shows its cost per paid lead', () => {
   assert.equal(none.campaigns[0].cpl, '—');
 });
 
-test('the week says it is the last full week, and warns when the data has chosen mistakes', () => {
-  const plain = periodView(rep, storeC({ leadList: [] }), 'week', '2026-10-21');
-  assert.match(plain.note, /^Week of 12 Oct 2026 \(last full Monday to Sunday\) · compared with the previous week/);
-  const broken = periodView({ ...rep, injected: [{ problem: 'edge_cases', caught: true }] }, storeC({ leadList: [] }), 'week', '2026-10-21');
+test('the run’s week says so, and warns when the data has chosen mistakes', () => {
+  const plain = periodView(rep, storeC({ leadList: [] }), 'week', NOW, 1);
+  assert.match(plain.note, /^12–18 Oct 2026 \(the run’s week\) · compared with the previous week/);
+  const broken = periodView({ ...rep, injected: [{ problem: 'edge_cases', caught: true }] }, storeC({ leadList: [] }), 'week', NOW, 1);
   assert.match(broken.note, /mistakes you chose are in this week’s data, so some changes look extreme/);
 });
 
-test('monthly budget pacing: spent so far against where it should be by today', () => {
-  const b = budgetFor('clinic', 'month', '2026-10-20');
-  assert.deepEqual(pacing(400, b), { spent: '$400.00', budget: '$800.00', pct: 50, expectedPct: 65, status: 'under', text: '50% of the $800.00 monthly budget spent, 65% of the month gone' });
+test('monthly budget pacing: spent so far against where it should be by now', () => {
+  // 19 whole days of October gone, plus half of today: 19.5 / 31 = 63%
+  const b = budgetFor('clinic', 'month', periodRange('month', '2026-10-20'), 0.5);
+  assert.deepEqual(pacing(400, b), { spent: '$400.00', budget: '$800.00', pct: 50, expectedPct: 63, status: 'under', text: '50% of the $800.00 monthly budget spent, 63% of the month gone' });
   assert.equal(pacing(700, b).status, 'over');
   assert.equal(pacing(520, b).status, 'on track');
 });
 
 test('every period has a budget: a day is a 365th of the year, a week seven days, the year twelve months', () => {
-  assert.deepEqual(budgetFor('clinic', 'day', '2026-10-20'), { amount: 26.3, word: 'Daily', expectedPct: 100, due: null });
-  assert.equal(budgetFor('clinic', 'week', '2026-10-18').amount, 184.11);
-  assert.equal(budgetFor('store', 'year', '2026-10-20').amount, 8400);
-  assert.equal(budgetFor('store', 'year', '2026-10-20').expectedPct, 80);
-  assert.equal(budgetFor('store', 'live', '2026-10-21', 0.25).expectedPct, 25);
-  assert.equal(pacing(26.3, budgetFor('clinic', 'day', '2026-10-20')).text, '100% of the $26.30 daily budget spent');
-  for (const period of ['day', 'week', 'month', 'year', 'live']) assert.ok(periodView(rep, storeC(), period, '2026-10-21').budget.amount > 0, period);
+  const past = (period, back = 1) => periodRange(period, '2026-10-22', back);
+  assert.deepEqual(budgetFor('clinic', 'day', past('day')), { amount: 26.3, word: 'Daily', expectedPct: 100, due: null });
+  assert.equal(budgetFor('clinic', 'week', past('week')).amount, 184.11);
+  assert.equal(budgetFor('store', 'year', past('year')).amount, 8400);
+  // 21 Oct is day 294 of 365: 293 whole days gone plus the whole day
+  assert.equal(budgetFor('store', 'year', periodRange('year', '2026-10-21'), 1).expectedPct, 81);
+  assert.equal(budgetFor('store', 'day', past('day', 0), 0.25).expectedPct, 25);
+  assert.equal(budgetFor('store', 'week', past('week', 0), 0.5).expectedPct, 50); // Thursday noon: 3.5 of 7 days
+  assert.equal(pacing(26.3, budgetFor('clinic', 'day', past('day'))).text, '100% of the $26.30 daily budget spent');
+  for (const period of ['day', 'week', 'month', 'year']) for (const back of [0, 1]) assert.ok(periodView(rep, storeC(), period, NOW, back).budget.amount > 0, period);
 });
 
 test('every period lists its leads, and the list matches the leads card', () => {
-  for (const period of ['day', 'month', 'year', 'live']) {
-    const v = periodView(rep, storeC({ leadList: [] }), period, '2026-10-21', new Date(Date.UTC(2026, 9, 21, 15)));
-    assert.equal(v.leads.length, v.kpis.leads, period);
-    assert.ok(v.leadsTitle.startsWith('Leads'), period);
+  for (const period of ['day', 'week', 'month', 'year']) for (const back of [0, 1, 2]) {
+    const v = periodView(rep, storeC({ leadList: [] }), period, NOW, back);
+    if (v.report) continue;
+    assert.equal(v.leads.length, v.kpis.leads, `${period} ${back}`);
+    assert.ok(v.leads.every(l => Date.parse(l.createdAt) < +NOW), `${period} ${back}: no lead from later today`);
   }
-  assert.equal(periodView(rep, storeC({ leadList: [] }), 'month', '2026-10-21').leadsTitle, 'Leads this month');
-  assert.equal(periodView(rep, storeC({ leadList: [] }), 'day', '2026-10-21').leadsTitle, 'Leads on 20 Oct 2026');
+  assert.equal(periodView(rep, storeC({ leadList: [] }), 'month', NOW).leadsTitle, 'Leads this month so far');
+  assert.equal(periodView(rep, storeC({ leadList: [] }), 'day', NOW).leadsTitle, 'Leads today so far');
+  assert.equal(periodView(rep, storeC({ leadList: [] }), 'day', NOW, 1).leadsTitle, 'Leads on 21 Oct 2026');
+  assert.equal(periodView(rep, storeC({ leadList: [] }), 'month', NOW, 1).leadsTitle, 'Leads in 1–30 Sep 2026');
 });
 
 test('smooth lines pass through every point and never overshoot them', () => {
@@ -415,8 +447,9 @@ test('smooth lines pass through every point and never overshoot them', () => {
 });
 
 test('CSV file names are plain and say what they hold', () => {
-  assert.equal(csvName('clinic', 'day', '2026-10-21'), 'lumiere-skin-clinic-last-14-days-to-2026-10-20.csv');
-  assert.equal(csvName('store', 'month', '2026-10-21'), 'northwind-home-month-2026-10-21.csv');
+  assert.equal(csvName('clinic', 'day', periodView(rep, storeC(), 'day', NOW, 1)), 'lumiere-skin-clinic-14-days-to-2026-10-21.csv');
+  assert.equal(csvName('clinic', 'day', periodView(rep, storeC(), 'day', NOW)), 'lumiere-skin-clinic-2026-10-22-by-hour.csv');
+  assert.equal(csvName('store', 'month', periodView(rep, storeC(), 'month', NOW)), 'northwind-home-2026-10-01-to-2026-10-22.csv');
 });
 
 test('cost per click with no clicks shows a dash in the CSV, not a number', () => {
@@ -424,11 +457,16 @@ test('cost per click with no clicks shows a dash in the CSV, not a number', () =
 });
 
 test('Day says which day it is compared with, and can compare with the day before', () => {
-  const week = periodView(rep, storeC(), 'day', '2026-10-22');
+  const week = periodView(rep, storeC(), 'day', NOW, 1);
   assert.match(week.note, /^21 Oct 2026 · compared with Wednesday 14 Oct \(same day last week\)/);
-  const prev = periodView(rep, storeC(), 'day', '2026-10-22', new Date(), 'prev');
+  const prev = periodView(rep, storeC(), 'day', NOW, 1, 'prev');
   assert.match(prev.note, /^21 Oct 2026 · compared with Tuesday 20 Oct \(the day before\)/);
   assert.deepEqual(prev.before, kpisFromTotals('store', sumDays(daySeries('store', '2026-10-20', '2026-10-20', runRows))));
+  // today against yesterday up to the same time
+  const today = periodView(rep, storeC(), 'day', NOW, 0, 'prev');
+  assert.match(today.note, /compared with Wednesday 21 Oct up to the same time \(the day before\)/);
+  assert.equal(today.live.before.day, '2026-10-21');
+  assert.equal(today.vsLabel, 'Same time the day before');
   // the switch only changes Day
-  assert.equal(periodView(rep, storeC(), 'month', '2026-10-22', new Date(), 'prev').note, periodView(rep, storeC(), 'month', '2026-10-22').note);
+  assert.equal(periodView(rep, storeC(), 'month', NOW, 0, 'prev').note, periodView(rep, storeC(), 'month', NOW).note);
 });

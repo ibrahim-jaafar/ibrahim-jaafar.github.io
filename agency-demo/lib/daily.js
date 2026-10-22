@@ -17,7 +17,11 @@ export const addDays = (key, n) => dayKey(Date.parse(`${key}T00:00:00Z`) + n * D
 export function seedOf(text) {
   let h = 0x811c9dc5;
   for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
-  return h >>> 0;
+  // mixed (murmur3's finaliser): days of one month differ only in their last digits, and unmixed seeds let
+  // whole made-up months swing together (the clinic's monthly leads spread twice as wide as chance)
+  h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+  return (h ^ (h >>> 16)) >>> 0;
 }
 
 // Share `total` out by `weights` in whole units (cents when scale is 100), so the parts add up exactly.
@@ -210,18 +214,19 @@ function monthsBack(key, n) {
   return dayKey(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), Math.min(d, last)));
 }
 
-// Which days a period covers, and the days it is compared with. Periods end yesterday (the last closed day);
-// the week is the run's week.
-export function periodRange(period, today, weekStart) {
-  const y = addDays(today, -1);
-  if (period === 'day') return { from: y, to: y, cmp: { from: addDays(y, -7), to: addDays(y, -7) } };
-  if (period === 'week') return { from: weekStart, to: addDays(weekStart, 6), cmp: { from: addDays(weekStart, -7), to: addDays(weekStart, -1) } };
-  if (period === 'month') {
-    const from = `${y.slice(0, 8)}01`;
-    return { from, to: y, cmp: { from: monthsBack(from, 1), to: monthsBack(y, 1) } };
-  }
-  const from = `${y.slice(0, 4)}-01-01`;
-  return { from, to: y, cmp: { from: monthsBack(from, 12), to: monthsBack(y, 12) } };
+// Which days a period covers, and the days it is compared with. `back` steps to earlier periods: 0 is the one
+// running now (current: it ends today, so far), 1 the one before, and so on. Day and Week are compared with a
+// week earlier (weekends are quieter); Month and Year with the same days of the month or year before.
+export function periodRange(period, today, back = 0) {
+  const months = { month: 1, year: 12 }[period];
+  const at = months ? monthsBack(today, months * back) : addDays(today, -(period === 'week' ? 7 : 1) * back);
+  let from = at, end = at;
+  if (period === 'week') { from = addDays(at, -((new Date(`${at}T00:00:00Z`).getUTCDay() + 6) % 7)); end = addDays(from, 6); }
+  if (period === 'month') { from = `${at.slice(0, 8)}01`; end = addDays(monthsBack(from, -1), -1); }
+  if (period === 'year') { from = `${at.slice(0, 4)}-01-01`; end = `${at.slice(0, 4)}-12-31`; }
+  const current = back === 0, to = current ? today : end;
+  const cmp = months ? { from: monthsBack(from, months), to: current ? monthsBack(to, months) : addDays(from, -1) } : { from: addDays(from, -7), to: addDays(to, -7) };
+  return { from, to, current, cmp };
 }
 
 // The live day builds up hour by hour on the same curve the made-up leads arrive by.
@@ -254,14 +259,14 @@ function hoursUpTo(full, people, start, hoursNow) {
   return hours;
 }
 
-// Today so far (provisional: the day isn't over), plus the same time a week ago to compare with.
-// runRows / runLeads: the run's real days and leads, used instead of made-up ones when "a week ago" is one of them.
-export function liveToday(client, now, runRows = [], runLeads = null) {
+// Today so far (provisional: the day isn't over), plus `cmpDay` (a week ago unless asked) up to the same time.
+// runRows / runLeads: the run's real days and leads, used instead of made-up ones when either day is one of them.
+export function liveToday(client, now, runRows = [], runLeads = null, cmpDay = null) {
   const fullOf = d => runRows.find(r => r.day === d) ?? historyDay(client, d);
   // a run day without its leads (an older report) falls back to the hourly curve
   const peopleOf = d => (runRows.some(r => r.day === d) ? runLeads && runLeads.filter(l => dayKey(l.createdAt) === d) : historyLeads(client, d));
-  const day = dayKey(now), weekAgo = addDays(day, -7);
-  const start = Date.parse(`${day}T00:00:00Z`), hoursNow = (now - start) / 36e5;
+  const day = dayKey(now), weekAgo = cmpDay ?? addDays(day, -7);
+  const start = Date.parse(`${day}T00:00:00Z`), startBefore = Date.parse(`${weekAgo}T00:00:00Z`), hoursNow = (now - start) / 36e5;
   const full = fullOf(day), before = fullOf(weekAgo), people = peopleOf(day), peopleBefore = peopleOf(weekAgo);
   const totals = soFar(full, people, start, hoursNow);
   // campaigns: today's totals shared out like the full day's campaigns, so they add up exactly
@@ -274,6 +279,6 @@ export function liveToday(client, now, runRows = [], runLeads = null) {
     day, asOf: new Date(now).toISOString(), share: shareBy(hoursNow), leads: arrived ?? [],
     totals, hours: hoursUpTo(full, people, start, hoursNow),
     campaigns: fc.map((c, i) => ({ name: c.name, spend: cs.spend[i], impressions: cs.impressions[i], clicks: cs.clicks[i], paidLeads: cs.paidLeads[i] })),
-    lastWeek: { day: weekAgo, totals: soFar(before, peopleBefore, start - 7 * D_MS, hoursNow), hours: hoursUpTo(before, peopleBefore, start - 7 * D_MS, hoursNow) },
+    before: { day: weekAgo, totals: soFar(before, peopleBefore, startBefore, hoursNow), hours: hoursUpTo(before, peopleBefore, startBefore, hoursNow) },
   };
 }

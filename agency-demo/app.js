@@ -149,49 +149,52 @@ export function rangeText(from, to) {
   return `${a.d} ${MONTHS[a.m - 1]} ${a.y} – ${b.d} ${MONTHS[b.m - 1]} ${b.y}`;
 }
 
-// What the dashboard shows for one client and one period. Week is the run's report; day, month and year
-// are added up from daily totals (the run's real days plus made-up history); live is today so far.
-export function periodView(report, c, period, today, now = new Date(), dayVs = 'week') {
+// What the dashboard shows for one client and one period: the current period so far (back = 0) or a whole
+// earlier one. Totals are added up from days (the run's real days plus made-up history); today counts up to now.
+// The run's own week (‹ on Week) is the run's report itself.
+export const HISTORY_START = '2025-01-01';
+export function periodView(report, c, period, now = new Date(), back = 0, dayVs = 'week') {
   const weekStart = dayKey(report.weekStart);
   const runRows = c.days ?? [];
+  const today = dayKey(now);
+  const r = periodRange(period, today, back);
+  // Day is compared with the same weekday a week before (weekends are quieter), or with the day before if asked
+  if (period === 'day' && dayVs === 'prev') r.cmp = { from: addDays(r.from, -1), to: addDays(r.from, -1) };
   const kpisOf = rows => kpisFromTotals(c.client, sumDays(rows));
-  if (period === 'week') {
+  const title = r.current ? { day: 'Today', week: 'This week', month: 'This month', year: 'This year' }[period] : rangeText(r.from, r.to);
+  const base = { from: r.from, to: r.to, current: r.current, title, earliest: r.from <= HISTORY_START, runWeek: rangeText(weekStart, addDays(weekStart, 6)) };
+  if (period === 'week' && r.from === weekStart && !r.current) {
     // reports saved before the leads list existed were compared with the previous run, newer ones with the week before
     const vs = c.leadList ? 'the previous week (made-up history)' : 'the previous report';
     const odd = report.injected?.length ? ' · mistakes you chose are in this week’s data, so some changes look extreme' : '';
-    const to = addDays(weekStart, 6);
-    return { kpis: c.kpis, changes: c.changes, before: c.previousKpis ?? null, rows: runRows, campaigns: c.campaigns ?? [], report: true, to,
-      leads: c.leadList ?? null, leadsTitle: 'Leads this week', budget: budgetFor(c.client, 'week', to),
-      note: `Week of ${rangeText(weekStart, weekStart)} (last full Monday to Sunday) · compared with ${vs}${odd}` };
+    return { ...base, kpis: c.kpis, changes: c.changes, before: c.previousKpis ?? null, rows: runRows, campaigns: c.campaigns ?? [], report: true,
+      leads: c.leadList ?? null, leadsTitle: `Leads in ${rangeText(r.from, r.to)}`, budget: budgetFor(c.client, period, r),
+      note: `${rangeText(r.from, r.to)} (the run’s week) · compared with ${vs}${odd}` };
   }
-  if (period === 'live') {
-    const live = liveToday(c.client, now, runRows, c.leadList);
-    const asOf = new Date(now).toISOString().slice(11, 16);
-    const kpis = kpisFromTotals(c.client, { ...live.totals, days: 1 });
-    const before = kpisFromTotals(c.client, { ...live.lastWeek.totals, days: 1 });
-    const weekday = WEEKDAYS[new Date(`${live.day}T00:00:00Z`).getUTCDay()];
-    return { kpis, changes: pctChanges(kpis, before), before, rows: [], campaigns: live.campaigns, report: false, live,
-      leads: live.leads, leadsTitle: 'Leads today so far', budget: budgetFor(c.client, 'live', live.day, live.share),
-      note: `Today so far, as of ${asOf} UTC · provisional until the day closes · compared with the same time last ${weekday} · made-up live feed` };
-  }
-  const r = periodRange(period, today, weekStart);
-  // Day is compared with the same weekday a week before (weekends are quieter), or with the day before if asked
-  let cmpText = rangeText(r.cmp.from, r.cmp.to);
-  if (period === 'day') {
-    if (dayVs === 'prev') r.cmp = { from: addDays(r.to, -1), to: addDays(r.to, -1) };
-    const p = parts(r.cmp.from);
-    cmpText = `${WEEKDAYS[new Date(`${r.cmp.from}T00:00:00Z`).getUTCDay()]} ${p.d} ${MONTHS[p.m - 1]} (${dayVs === 'prev' ? 'the day before' : 'same day last week'})`;
-  }
-  const rows = daySeries(c.client, period === 'day' ? addDays(r.to, -13) : r.from, r.to, runRows);
-  const inPeriodRows = rows.filter(d => d.day >= r.from);
-  const cmpRows = daySeries(c.client, r.cmp.from, r.cmp.to, runRows);
+  // the current period ends with today so far, compared with its own last day up to the same time
+  const live = r.current && liveToday(c.client, now, runRows, c.leadList, r.cmp.to);
+  const todayRow = live && { day: today, ...live.totals, campaigns: live.campaigns, simulated: !runRows.some(d => d.day === today), partial: true };
+  const upTo = (from, to) => (r.current ? daySeries(c.client, from, addDays(to, -1), runRows) : daySeries(c.client, from, to, runRows));
+  const inPeriodRows = [...upTo(r.from, r.to), ...(live ? [todayRow] : [])];
+  const cmpRows = [...upTo(r.cmp.from, r.cmp.to), ...(live ? [{ day: r.cmp.to, ...live.before.totals }] : [])];
+  // a past day is charted with the two weeks up to it; today is charted by the hour
+  const rows = period === 'day' ? (live ? [] : daySeries(c.client, addDays(r.to, -13), r.to, runRows)) : inPeriodRows;
   const kpis = kpisOf(inPeriodRows), before = kpisOf(cmpRows);
+  const asOf = r.current ? `, as of ${new Date(now).toISOString().slice(11, 16)} UTC` : '';
+  const same = r.current ? ' up to the same time' : '';
+  const p = parts(r.cmp.from);
+  const cmpText = period === 'day'
+    ? `${WEEKDAYS[new Date(`${r.cmp.from}T00:00:00Z`).getUTCDay()]} ${p.d} ${MONTHS[p.m - 1]}${same} (${dayVs === 'prev' ? 'the day before' : 'same day last week'})`
+    : `${rangeText(r.cmp.from, r.cmp.to)}${same}`;
   const madeUp = !c.days ? ' · all days are made-up history (this report has no daily figures)'
-    : [...rows, ...cmpRows].some(d => d.simulated) ? ' · days outside the run’s week are made-up history' : '';
-  return { kpis, changes: pctChanges(kpis, before), before, rows, campaigns: sumCampaigns(inPeriodRows, c.client), report: false, to: r.to, highlight: period === 'day' ? r.to : undefined,
-    leads: periodLeads(c.client, r.from, r.to, runRows, c.leadList), budget: budgetFor(c.client, period, r.to),
-    leadsTitle: period === 'day' ? `Leads on ${rangeText(r.from, r.to)}` : `Leads this ${period}`,
-    note: `${rangeText(r.from, r.to)} · compared with ${cmpText}${madeUp}` };
+    : [...inPeriodRows, ...rows, ...cmpRows].some(d => d.simulated) ? ' · days outside the run’s week are made-up history' : '';
+  return { ...base, kpis, changes: pctChanges(kpis, before), before, rows, campaigns: sumCampaigns(inPeriodRows, c.client), report: false,
+    live: period === 'day' && live ? live : undefined, vsLabel: dayVs === 'prev' ? 'Same time the day before' : 'Same time last week',
+    highlight: period === 'day' ? r.to : undefined,
+    leads: periodLeads(c.client, r.from, r.to, runRows, c.leadList).filter(l => Date.parse(l.createdAt) < +now),
+    budget: budgetFor(c.client, period, r, live ? live.share : 1),
+    leadsTitle: r.current ? (period === 'day' ? 'Leads today so far' : `Leads this ${period} so far`) : `Leads ${period === 'day' ? 'on' : 'in'} ${rangeText(r.from, r.to)}`,
+    note: `${rangeText(r.from, r.to)}${r.current ? ` so far${asOf} · provisional until the ${period} ends` : ''} · compared with ${cmpText}${madeUp}` };
 }
 
 const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
@@ -209,7 +212,7 @@ export function chartPoints(rows, period) {
     // a month that isn't over yet says so, so its lower total doesn't read as a drop
     const lastDay = new Date(Date.UTC(p.y, p.m, 0)).getUTCDate(), upto = parts(ds.at(-1).day).d;
     const monthLabel = upto < lastDay ? `${MONTHS[p.m - 1]} (to ${ordinal(upto)})` : MONTHS[p.m - 1];
-    return { key, label: period === 'year' ? monthLabel : `${p.d} ${MONTHS[p.m - 1]}`, spend: t.spend, revenue: t.revenue, leads: t.leads, clicks: t.clicks,
+    return { key, label: period === 'year' ? monthLabel : `${p.d} ${MONTHS[p.m - 1]}${ds[0].partial ? ' (so far)' : ''}`, spend: t.spend, revenue: t.revenue, leads: t.leads, clicks: t.clicks,
       cpc: t.clicks ? Math.round((t.spend / t.clicks) * 100) / 100 : null };
   });
 }
@@ -239,21 +242,15 @@ export function leadsView(list, client) {
 // Budget pacing (made-up monthly budgets): how much is spent against how much should be by now.
 // A day gets a 365th of the year's budget, a week seven days' worth, the year twelve months.
 export const BUDGETS = { clinic: 800, store: 700 };
-const BUDGET_WORD = { day: 'Daily', week: 'Weekly', month: 'Monthly', year: 'Yearly', live: 'Daily' };
-export function budgetFor(client, period, to, liveShare = 1) {
-  const month = BUDGETS[client], daily = (month * 12) / 365, p = parts(to);
-  const cents = n => Math.round(n * 100) / 100, word = BUDGET_WORD[period];
-  if (period === 'month') {
-    const days = new Date(Date.UTC(p.y, p.m, 0)).getUTCDate();
-    return { amount: month, word, expectedPct: Math.round((p.d / days) * 100), due: 'of the month gone' };
-  }
-  if (period === 'year') {
-    const day = (Date.parse(`${to}T00:00:00Z`) - Date.UTC(p.y, 0, 1)) / 864e5 + 1, days = p.y % 4 ? 365 : 366;
-    return { amount: month * 12, word, expectedPct: Math.round((day / days) * 100), due: 'of the year gone' };
-  }
-  // live: spend follows the day's usual hours, so "by now" is the share a usual day has spent by this time
-  if (period === 'live') return { amount: cents(daily), word, expectedPct: Math.round(liveShare * 100), due: 'of a usual day’s spend due by now' };
-  return { amount: cents(period === 'week' ? daily * 7 : daily), word, expectedPct: 100, due: null };
+const BUDGET_WORD = { day: 'Daily', week: 'Weekly', month: 'Monthly', year: 'Yearly' };
+// r: the period's range; todayShare: how much of a usual day's spend is due by now (spend follows the day's usual hours)
+export function budgetFor(client, period, r, todayShare = 1) {
+  const month = BUDGETS[client], daily = (month * 12) / 365, p = parts(r.from);
+  const amount = Math.round({ day: daily, week: daily * 7, month, year: month * 12 }[period] * 100) / 100, word = BUDGET_WORD[period];
+  if (!r.current) return { amount, word, expectedPct: 100, due: null };
+  const length = { day: 1, week: 7, month: new Date(Date.UTC(p.y, p.m, 0)).getUTCDate(), year: p.y % 4 ? 365 : 366 }[period];
+  const gone = (Date.parse(`${r.to}T00:00:00Z`) - Date.parse(`${r.from}T00:00:00Z`)) / 864e5 + todayShare; // whole days before today, plus today so far
+  return { amount, word, expectedPct: Math.round((gone / length) * 100), due: period === 'day' ? 'of a usual day’s spend due by now' : `of the ${period} gone` };
 }
 export function pacing(spend, b) {
   const pct = Math.round((spend / b.amount) * 100);
@@ -264,8 +261,8 @@ export function pacing(spend, b) {
 }
 
 const SLUGS = { clinic: 'lumiere-skin-clinic', store: 'northwind-home' };
-export const csvName = (client, period, today) => period === 'day'
-  ? `${SLUGS[client]}-last-14-days-to-${addDays(today, -1)}.csv` : `${SLUGS[client]}-${period}-${today}.csv`;
+export const csvName = (client, period, pv) => pv.live ? `${SLUGS[client]}-${pv.to}-by-hour.csv`
+  : period === 'day' ? `${SLUGS[client]}-14-days-to-${pv.to}.csv` : `${SLUGS[client]}-${pv.from}-to-${pv.to}.csv`;
 
 // One line per day (or per hour for Live). Plain numbers, so it opens cleanly in a spreadsheet.
 export function csvFor(rows, client) {
@@ -279,13 +276,16 @@ export function csvFor(rows, client) {
   return [head.join(','), ...lines].join('\n') + '\n';
 }
 
-const HASH_CLIENTS = ['clinic', 'store'], HASH_PERIODS = ['day', 'week', 'month', 'year', 'live'];
+const HASH_CLIENTS = ['clinic', 'store'], HASH_PERIODS = ['day', 'week', 'month', 'year'];
 export function parseHash(hash) {
   const q = new URLSearchParams(String(hash || '').replace(/^#/, ''));
-  const client = q.get('client'), period = q.get('period');
-  return { client: HASH_CLIENTS.includes(client) ? client : null, period: HASH_PERIODS.includes(period) ? period : null };
+  const client = q.get('client'), back = Number(q.get('back'));
+  // older links said "live", which is now today on Day
+  const period = q.get('period') === 'live' ? 'day' : q.get('period');
+  return { client: HASH_CLIENTS.includes(client) ? client : null, period: HASH_PERIODS.includes(period) ? period : null,
+    back: Number.isInteger(back) && back > 0 && back < 1000 ? back : 0 };
 }
-export const hashFor = (client, period) => `#client=${client}&period=${period}`;
+export const hashFor = (client, period, back = 0) => `#client=${client}&period=${period}${back ? `&back=${back}` : ''}`;
 
 export function noticeText(kind, info = {}) {
   if (kind === 'waking') return 'Waking up the demo server. It sleeps when nobody uses it, so this can take up to a minute…';
@@ -337,13 +337,13 @@ const money2 = v => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, ma
 
 function chartsFor(c, pv, period) {
   const valueLabel = c.client === 'clinic' ? 'Booking value' : 'Revenue';
-  if (period === 'live') {
-    // cumulative through the day, against the same hours a week ago
+  if (pv.live) {
+    // today, cumulative through the day, against the same hours of the day it is compared with
     const cumul = hrs => { let l = 0, s = 0, k = 0; return hrs.map(hr => ({ leads: (l += hr.leads), spend: Math.round((s += hr.spend) * 100) / 100, clicks: (k += hr.clicks) })); };
-    const now = cumul(pv.live.hours), before = cumul(pv.live.lastWeek.hours);
+    const now = cumul(pv.live.hours), before = cumul(pv.live.before.hours);
     const pts = pv.live.hours.map((hr, i) => ({ key: String(hr.hour), label: `${String(hr.hour).padStart(2, '0')}:00`,
       leads: now[i].leads, spend: now[i].spend, clicks: now[i].clicks, leadsLw: before[i]?.leads, spendLw: before[i]?.spend, clicksLw: before[i]?.clicks }));
-    const two = (key, label) => [{ key, label: `${label} today`, color: COLORS.blue }, { key: `${key}Lw`, label: 'Same time last week', color: COLORS.orange }];
+    const two = (key, label) => [{ key, label: `${label} today`, color: COLORS.blue }, { key: `${key}Lw`, label: pv.vsLabel, color: COLORS.orange }];
     return [
       chart({ title: 'Leads so far today (UTC hours)', points: pts, whole: true, series: two('leads', 'Leads'), fmt: v => String(Math.round(v)) }),
       chart({ title: 'Ad spend so far today (simulated)', points: pts, series: two('spend', 'Ad spend'), fmt: money0, tipFmt: money2 }),
@@ -382,13 +382,13 @@ function dashBody(c, problems, pv, period) {
       : h('p', { class: 'hint' }, 'This older report has no campaign breakdown. Run the report to see it.'),
     v.unsourced ? h('p', { class: 'hint' }, `${v.unsourced} paid ${v.unsourced === 1 ? 'lead has' : 'leads have'} no recorded source, so ${v.unsourced === 1 ? 'it isn’t' : 'they aren’t'} in any campaign.`) : null);
 
-  // download what's on screen, one line per day (per hour for Live)
-  const csvRows = period === 'live' ? pv.live.hours : pv.rows;
+  // download what's on screen, one line per day (per hour for today)
+  const csvRows = pv.live ? pv.live.hours : pv.rows;
   const csvBtn = h('button', { type: 'button', class: 'csv' }, '⭳ Download CSV');
   csvBtn.disabled = !csvRows.length;
   csvBtn.addEventListener('click', () => {
     const url = URL.createObjectURL(new Blob([csvFor(csvRows, c.client)], { type: 'text/csv' }));
-    const a = h('a', { href: url, download: csvName(c.client, period, dayKey(Date.now())) });
+    const a = h('a', { href: url, download: csvName(c.client, period, pv) });
     document.body.append(a);
     a.click();
     a.remove();
@@ -416,7 +416,7 @@ function dashBody(c, problems, pv, period) {
         v.warnings.length ? h('ul', {}, v.warnings.map(w => h('li', {}, w.message,
           problems.includes(WARNING_FROM[w.code]) ? [' ', h('small', {}, `← ${PROBLEM_TEXT[WARNING_FROM[w.code]][0]}`)] : null))) : null)));
   } else {
-    out.push(h('p', { class: 'hint pfoot' }, 'The AI summary and the data checks cover the run’s week: switch to Week to see them.'));
+    out.push(h('p', { class: 'hint pfoot' }, `The AI summary and the data checks cover the run’s week (${pv.runWeek}): on Week, press ‹ to go back to it.`));
   }
   out.push(leadsTable(c, pv));
   // replaceChildren would print a null as the text "null"
@@ -441,7 +441,7 @@ function leadsTable(c, pv) {
   const box = h('div', { class: 'dbox leads-box' }, h('h4', {}, `${pv.leadsTitle} (${rows.length})`,
     h('small', { class: 'sim' }, 'made-up people')));
   if (!pv.leads) { box.append(h('p', { class: 'hint' }, 'This older report has no list of leads. Run the report to see it.')); return box; }
-  if (!rows.length) { box.append(h('p', { class: 'hint' }, pv.live ? 'No leads yet today.' : 'No leads in this period.')); return box; }
+  if (!rows.length) { box.append(h('p', { class: 'hint' }, pv.current ? `No leads yet ${pv.title.toLowerCase()}.` :'No leads in this period.')); return box; }
   const tbody = h('tbody');
   const fill = all => tbody.replaceChildren(...rows.slice(0, all ? rows.length : LEADS_SHOWN).map(r => h('tr', {},
     h('td', {}, r.date), h('td', {}, r.name, r.duplicate ? h('small', { class: 'dupe', title: 'Same person, phone or email written differently' }, 'duplicate') : null),
@@ -459,27 +459,34 @@ function leadsTable(c, pv) {
   return box;
 }
 
-const PERIODS = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year'], ['live', 'Live']];
+const PERIODS = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year']];
 const LIVE_MS = 30000;
 let liveTimer;
 
 function dashboard(report, problems) {
-  // aria-live off: the 30 s Live refresh must not make screen readers read the dashboard again
+  // aria-live off: the 30 s refresh of the current period must not make screen readers read the dashboard again
   const body = h('div', { class: 'dbody', 'aria-live': 'off' });
-  // the address keeps the client and period, so a refresh or a shared link opens the same view
+  // the address keeps the client, period and how far back, so a refresh or a shared link opens the same view
   const want = parseHash(location.hash);
-  const state = { ci: Math.max(0, report.clients.findIndex(c => c.client === want.client)), period: want.period ?? 'week', dayVs: 'week' };
+  const state = { ci: Math.max(0, report.clients.findIndex(c => c.client === want.client)), period: want.period ?? 'week', back: want.back, dayVs: 'week' };
   const tabs = report.clients.map(c => h('button', { type: 'button', role: 'tab' }, h('i', { class: `ldot ${c.light}` }), c.name));
-  const pbtns = PERIODS.map(([key, label]) => h('button', { type: 'button', 'data-p': key },
-    key === 'live' ? h('i', { class: 'livedot' }) : null, label));
+  const pbtns = PERIODS.map(([key, label]) => h('button', { type: 'button', 'data-p': key }, label));
   const draw = () => {
     tabs.forEach((t, j) => t.setAttribute('aria-selected', String(state.ci === j)));
     pbtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === state.period)));
     const c = report.clients[state.ci];
-    history.replaceState(null, '', hashFor(c.client, state.period));
-    const pv = periodView(report, c, state.period, dayKey(Date.now()), new Date(), state.dayVs);
+    history.replaceState(null, '', hashFor(c.client, state.period, state.back));
+    const pv = periodView(report, c, state.period, new Date(), state.back, state.dayVs);
     const view = dashBody(c, problems, pv, state.period);
-    // Day only: what yesterday is compared with
+    // ‹ › step through earlier periods; the current one is marked live
+    const step = (label, by, off) => {
+      const b = h('button', { type: 'button', class: 'stepb', 'aria-label': `${by < 0 ? 'Next' : 'Previous'} ${state.period}` }, label);
+      b.disabled = off;
+      b.addEventListener('click', () => { state.back += by; draw(); body.querySelector(`.stepb[aria-label="${b.getAttribute('aria-label')}"]`)?.focus(); });
+      return b;
+    };
+    view[0].prepend(h('div', { class: 'stepper', role: 'group', 'aria-label': 'Move through time' },
+      step('‹', 1, pv.earliest), h('span', { class: 'steptitle' }, pv.current ? h('i', { class: 'livedot', title: 'Live: refreshes every 30 seconds' }) : null, pv.title), step('›', -1, pv.current)));
     if (state.period === 'day') {
       const pick = h('div', { class: 'vs', role: 'group', 'aria-label': 'Compare with' }, h('span', {}, 'Compare with'),
         [['week', 'Same day last week'], ['prev', 'Day before']].map(([key, label]) => {
@@ -491,20 +498,22 @@ function dashboard(report, problems) {
     }
     body.replaceChildren(...view);
     clearInterval(liveTimer);
-    // live numbers refresh every 30 s while Live is open
+    // the current period refreshes every 30 s, since today is still filling in
     // (skipped while someone is reading a chart, so focus and tooltips aren't lost)
-    if (state.period === 'live') liveTimer = setInterval(() => {
+    if (pv.current) liveTimer = setInterval(() => {
       if (!body.isConnected) return clearInterval(liveTimer);
       if (!body.contains(document.activeElement) && !body.querySelector('.chart-wrap:hover')) draw();
     }, LIVE_MS);
   };
   tabs.forEach((t, i) => t.addEventListener('click', () => { state.ci = i; draw(); }));
-  pbtns.forEach(b => b.addEventListener('click', () => { state.period = b.dataset.p; draw(); }));
+  // a period button always opens the current one
+  pbtns.forEach(b => b.addEventListener('click', () => { state.period = b.dataset.p; state.back = 0; draw(); }));
   // the address edited by hand, or back/forward, moves the dashboard too
   window.onhashchange = () => {
     const h2 = parseHash(location.hash);
     if (h2.client) state.ci = Math.max(0, report.clients.findIndex(c => c.client === h2.client));
     if (h2.period) state.period = h2.period;
+    state.back = h2.back;
     if (body.isConnected) draw();
   };
   draw();
