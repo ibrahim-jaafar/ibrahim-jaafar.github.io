@@ -107,7 +107,7 @@ export function placeholderValues(c) {
   const out = {};
   for (const [k, v] of Object.entries(c.kpis || {})) if (typeof v === 'number' && Number.isFinite(v)) out[k] = show(k, v);
   for (const [k, v] of Object.entries(c.changes || {})) if (v != null) out[`${k}_change`] = direction(v);
-  for (const w of c.warnings || []) { out[`${w.code}_count`] = String(w.count); out[`${w.code}_message`] = w.message; }
+  for (const w of c.warnings || []) out[`${w.code}_message`] = w.message; // the check's own sentence: the AI explains it in words
   return out;
 }
 
@@ -128,18 +128,7 @@ export const LABELS = {
   costPerOrder: { words: ['per order', 'each order'], example: 'cost per order was {costPerOrder}' },
   avgOrderValue: { words: ['average order', 'order value'], example: 'the average order was {avgOrderValue}' },
 };
-// counts of the checks' warnings, by warning code
-export const COUNT_LABELS = {
-  meta_mismatch: { words: ['meta', 'facebook'], example: 'Meta is missing {meta_mismatch_count} bookings' },
-  missing_source: { words: ['source', 'which ad', 'where they came', 'where it came'], example: '{missing_source_count} leads have no recorded source' },
-  duplicates: { words: ['twice', 'duplicate', 'same person', 'more than once'], example: '{duplicates_count} leads appear twice' },
-  bad_totals: { words: ['total'], example: '{bad_totals_count} total that does not add up' },
-  outlier: { words: ['order', 'large', 'unusual'], example: '{outlier_count} unusually large order' },
-  meta_rejected: { words: ['meta', 'facebook', 'reject', 'refuse', 'refused'], example: 'Meta rejected {meta_rejected_count} events' },
-};
-const labelOf = name => (name.endsWith('_message') ? null
-  : name.endsWith('_count') ? COUNT_LABELS[name.slice(0, -6)]
-  : LABELS[name.endsWith('_change') ? name.slice(0, -7) : name]);
+const labelOf = name => (name.endsWith('_message') ? null : LABELS[name.endsWith('_change') ? name.slice(0, -7) : name]);
 
 // The guide the AI gets, made from the same list the check uses, so the two can't disagree.
 export function placeholderGuide() {
@@ -147,8 +136,7 @@ export function placeholderGuide() {
   return [
     'Every placeholder needs its own label within a few words of it, in the same sentence, like these examples. A placeholder without its label nearby, or right after another number\'s label, makes the answer invalid.',
     ...Object.entries(LABELS).map(([k, l]) => line(k, l)),
-    'A {name_change} placeholder needs the same label as {name}, e.g. "leads were {leads_change} compared with the same days last month" or "cost per lead was {costPerLead_change} compared with last week".',
-    ...Object.entries(COUNT_LABELS).map(([k, l]) => line(`${k}_count`, l)),
+    'A {name_change} placeholder needs the same label as {name}, e.g. "leads were {leads_change} compared with <period.vs>" or "cost per lead was {costPerLead_change}".',
     'A {code_message} placeholder is the check\'s own sentence: put it on its own, e.g. "{duplicates_message}".',
   ].join('\n');
 }
@@ -201,6 +189,16 @@ function fill(text, values, path, errors) {
   });
 }
 
+// Every way a summary might name a time to compare with: one the period doesn't use ("last week" in a day view) is wrong.
+const TIME_WORDS = ['same days last week', 'same days last month', 'same days last year', 'last week', 'last month', 'last year',
+  'the day before', 'the week before', 'the month before', 'the year before', 'previous week', 'previous month', 'previous year', 'yesterday',
+  ...DAY_NAMES.map(d => `last ${d.toLowerCase()}`)];
+function checkTimes(text, period, path, errors) {
+  const own = `${period.covers} | ${period.vs}`.toLowerCase(), t = text.toLowerCase();
+  const bad = TIME_WORDS.find(w => t.includes(w) && !own.includes(w));
+  if (bad) errors.push(`${path} says "${bad}", but this is ${period.covers} compared with ${period.vs}`);
+}
+
 // The first reply that passes the checks wins. `broken` is the demo's "AI gives a bad answer": every reply becomes a refusal.
 export function pickAiAnswer(replies, input, broken = false) {
   const errors = [];
@@ -241,6 +239,8 @@ export function validateAiOutput(raw, input) {
       };
     }),
   };
+  if (input.period) [value.overview, ...value.clients.flatMap(c => [c.headline, c.summary, ...c.warnings_explained, ...c.next_steps])]
+    .forEach(t => checkTimes(t, input.period, 'answer', errors));
   if (!errors.length) checkSchema(filled, AI_SCHEMA, 'answer', errors); // now the lengths, as the reader will see them
   return errors.length ? { ok: false, errors } : { ok: true, value: filled };
 }

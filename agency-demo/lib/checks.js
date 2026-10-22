@@ -3,7 +3,7 @@ import { normalisePhone, normaliseEmail, inPeriod } from './leads.js';
 
 const OUTLIER_FACTOR = 5;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-const usd = n => `$${n.toFixed(2)}`;
+const usd = n => `$${n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
 
 // The warnings themselves, from counts. The run's checks and the dashboard's checks for any period both end here.
 // f: conv (converted leads, with value), meta ({ accepted, rejected } or null), noSource, dupes, reported and sum (spend)
