@@ -7,7 +7,7 @@ import { buildMetaEvents } from './lib/meta.js';
 import { buildAiInput, periodWords } from './lib/ai.js';
 import { alertText } from './lib/report.js';
 import { chart } from './charts.js';
-import { dayKey, addDays, daySeries, sumDays, periodFigures } from './lib/daily.js';
+import { dayKey, addDays, daySeries, sumDays, periodRange, periodFigures } from './lib/daily.js';
 
 const API = 'https://agency-report-demo.onrender.com/webhook/demo';
 const FIRST_CALL_MS = 8000, WAKE_RETRY_MS = 5000, WAKE_MAX_MS = 120000, POLL_MS = 1500, RUN_MAX_MS = 180000;
@@ -421,11 +421,20 @@ function aiBox(c, pv, entry, generate) {
     if (entry?.state === 'error') box.append(h('p', { class: 'partial' }, entry.text));
     box.append(h('p', { class: 'hint' }, `Gemini writes a short summary of ${pv.words.covers}, compared with ${pv.words.vs}. It never types a number: code fills them in.`));
   }
-  if (entry?.state !== 'loading') {
+  // what the button offers: a summary; after the template, Gemini again; after Gemini (kept, so asking again gives the
+  // same answer), the broken-answer test
+  const button = (label, broken) => {
+    const b = h('button', { type: 'button', class: 'csv gen' }, label);
+    b.addEventListener('click', () => generate(broken));
+    return b;
+  };
+  if (!entry || entry.state === 'error') {
     const broken = h('input', { type: 'checkbox' });
-    const btn = h('button', { type: 'button', class: 'csv gen' }, s ? 'Write it again' : 'Generate AI summary');
-    btn.addEventListener('click', () => generate(broken.checked));
-    box.append(h('div', { class: 'genrow' }, btn, h('label', {}, broken, ' Simulate a broken AI answer')));
+    const b = h('button', { type: 'button', class: 'csv gen' }, 'Generate AI summary');
+    b.addEventListener('click', () => generate(broken.checked));
+    box.append(h('div', { class: 'genrow' }, b, h('label', {}, broken, ' Simulate a broken AI answer')));
+  } else if (s) {
+    box.append(h('div', { class: 'genrow' }, entry.body.source === 'ai' ? button('Simulate a broken AI answer', true) : button('Ask Gemini again', false)));
   }
   return box;
 }
@@ -495,6 +504,8 @@ function dashboard(report, problems) {
     tabs.forEach((t, j) => t.setAttribute('aria-selected', String(state.ci === j)));
     pbtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === state.period)));
     const c = report.clients[state.ci];
+    // a hand-typed "back" can't reach before the made-up history starts
+    while (state.back > 0 && periodRange(state.period, dayKey(Date.now()), state.back).to < HISTORY_START) state.back--;
     history.replaceState(null, '', hashFor(c.client, state.period, state.back));
     const now = new Date(), pv = periodView(report, c, state.period, now, state.back, state.dayVs);
     const view = dashBody(c, problems, pv, state.period, aiBox(c, pv, summaries.get(viewKey()), generate));

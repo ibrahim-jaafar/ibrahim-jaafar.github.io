@@ -12,7 +12,7 @@ export const CONVERT_RATE = { clinic: 0.3, store: 0.25 };
 export const CANCEL_RATE = 0.04;
 // the week starts on Monday; weekends are quieter
 export const WEEKDAY_WEIGHT = [1.08, 1.08, 1.08, 1.08, 1.08, 0.7, 0.7];
-const pickWeighted = (rng, ws) => {
+export const pickWeighted = (rng, ws) => {
   let u = rng() * ws.reduce((a, w) => a + w, 0), i = 0;
   while (u > ws[i] && i < ws.length - 1) u -= ws[i++];
   return i;

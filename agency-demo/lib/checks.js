@@ -64,7 +64,7 @@ export function runChecks({ client, leads, spend, meta, weekStart }) {
 export function periodChecks(client, leads, days) {
   const conv = leads.filter(l => l.outcome === 'converted'), sum = sumOf(days, d => d.spend);
   return warningsFrom(client, { conv, noSource: leads.filter(l => l.source === null).length, dupes: leads.filter(l => l.duplicate).length,
-    meta: { accepted: conv.length - sumOf(days, d => d.metaMissed), rejected: sumOf(days, d => d.metaRejected) },
+    meta: { accepted: Math.max(0, conv.length - sumOf(days, d => d.metaMissed)), rejected: sumOf(days, d => d.metaRejected) },
     reported: Math.round((sum + sumOf(days, d => d.spendGap)) * 100) / 100, sum });
 }
 

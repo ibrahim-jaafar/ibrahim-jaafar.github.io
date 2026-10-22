@@ -3,7 +3,7 @@
 import { makeRng } from './rng.js';
 import { periodChecks } from './checks.js';
 import { pctChanges } from './ai.js';
-import { inPeriod, CAMPAIGNS, CAMPAIGN_SHARE, CONVERT_RATE, CANCEL_RATE, WEEKDAY_WEIGHT, FIRST, LAST, normalisePhone, normaliseEmail, HOUR_CURVE, shareBy } from './leads.js';
+import { inPeriod, pickWeighted, CAMPAIGNS, CAMPAIGN_SHARE, CONVERT_RATE, CANCEL_RATE, WEEKDAY_WEIGHT, FIRST, LAST, normalisePhone, normaliseEmail, HOUR_CURVE, shareBy } from './leads.js';
 
 const D_MS = 864e5;
 const dMoney = n => Math.round(n * 100) / 100;
@@ -38,8 +38,10 @@ function splitUnits(total, weights, scale) {
 
 // The run's 7 days. Leads, conversions and revenue come from the CRM leads by the day they came in;
 // the week's simulated spend, impressions and clicks are spread over the days and still add up to the week.
-// meta: what Meta accepted and rejected. The account-total gap and Meta's misses are known for the whole run only,
-// so they go on its last day, the day the report read them (the dashboard's checks add them up per period).
+// meta: what Meta accepted and rejected. Conversions Meta never got go on days that had conversions, earliest first
+// (which ones were held back isn't known, only how many), so no day misses more than it converted. The gap between the
+// account's total and its campaigns is shared out by each day's spend. Meta's refusals (too-old events, not tied to
+// any day's conversions) go on the last day, the day the report read them.
 // A day still under way keeps its whole day's share: the dashboard's "so far" takes the part up to the moment it shows.
 export function runDays(client, leads, spend, weekStart, meta = null) {
   const start = dayKey(weekStart);
@@ -51,17 +53,24 @@ export function runDays(client, leads, spend, weekStart, meta = null) {
   // each campaign's week is shared out over the days; a day's totals are the sum of its campaigns
   const camps = spend.campaigns.map(c => ({ name: c.name, spend: splitUnits(c.spend, w, 100), impressions: splitUnits(c.impressions || 0, wi, 1), clicks: splitUnits(c.clicks || 0, wc, 1) }));
   const inWeek = leads.filter(l => inPeriod(l, weekStart));
-  const allConv = inWeek.filter(l => l.outcome === 'converted').length;
-  const last = {
-    spendGap: dMoney(spend.reportedTotal - dSum(spend.campaigns, c => c.spend)),
-    metaMissed: meta ? allConv - meta.accepted : 0, metaRejected: meta ? meta.rejected : 0,
-  };
+  let missed = meta ? Math.max(0, inWeek.filter(l => l.outcome === 'converted').length - meta.accepted) : 0;
+  const missedOn = days.map(d => {
+    const n = Math.min(missed, inWeek.filter(l => dayKey(l.createdAt) === d && l.outcome === 'converted').length);
+    missed -= n;
+    return n;
+  });
+  const gap = dMoney(spend.reportedTotal - dSum(spend.campaigns, c => c.spend));
+  // the campaigns' week split by day, cents and all, then the gap in proportion (the last day takes the rounding)
+  const daySpend = days.map((_, i) => dSum(camps, c => c.spend[i])), weekSpend = dSum(daySpend, x => x);
+  const gaps = daySpend.map(x => (weekSpend ? dMoney((gap * x) / weekSpend) : 0));
+  gaps[6] = dMoney(gap - dSum(gaps.slice(0, 6), x => x));
   return days.map((day, i) => {
     const ls = inWeek.filter(l => dayKey(l.createdAt) === day);
     const conv = ls.filter(l => l.outcome === 'converted');
     const campaigns = camps.map(c => ({ name: c.name, spend: c.spend[i], impressions: c.impressions[i], clicks: c.clicks[i], paidLeads: ls.filter(l => l.source === c.name).length }));
     return {
-      ...(i === 6 ? last : { spendGap: 0, metaMissed: 0, metaRejected: 0 }),
+      spendGap: gaps[i], metaRejected: i === 6 && meta ? meta.rejected : 0,
+      metaMissed: missedOn[i],
       day,
       leads: ls.length,
       paidLeads: ls.filter(l => l.source !== 'organic').length,
@@ -112,15 +121,16 @@ function historyDraw(client, day) {
   row.impressions = Math.round(row.clicks / (0.01 + r() * 0.02));
   // split by campaign (drawn last, so the day's own numbers stay the same as before the split existed)
   const ws = CAMPAIGN_SHARE[client].map(x => x * (0.8 + r() * 0.4)), wk = ws.map(x => x * (0.85 + r() * 0.3));
-  const parts = { spend: splitUnits(row.spend, ws, 100), clicks: splitUnits(row.clicks, wk, 1), impressions: splitUnits(row.impressions, wk.map(x => x * (0.9 + r() * 0.2)), 1), paidLeads: splitUnits(row.paidLeads, ws, 1) };
-  row.campaigns = CAMPAIGNS[client].map((name, i) => ({ name, spend: parts.spend[i], impressions: parts.impressions[i], clicks: parts.clicks[i], paidLeads: parts.paidLeads[i] }));
+  const parts = { spend: splitUnits(row.spend, ws, 100), clicks: splitUnits(row.clicks, wk, 1), impressions: splitUnits(row.impressions, wk.map(x => x * (0.9 + r() * 0.2)), 1) };
+  // each paid lead picks its campaign by the shares, as a run's leads do (rounding a day's one or two leads would
+  // always hand them to the biggest campaign)
+  picks.forEach(p => { if (p.paid) p.camp = pickWeighted(r, ws); });
+  row.campaigns = CAMPAIGNS[client].map((name, i) => ({ name, spend: parts.spend[i], impressions: parts.impressions[i], clicks: parts.clicks[i], paidLeads: picks.filter(p => p.paid && p.camp === i).length }));
   // Now and then, the problems a real account has, for the dashboard's checks to find: a lead whose source the CRM
   // lost, the same person enquiring twice, a huge store order, an account total that's off, conversions that never
   // reached Meta or that Meta refused. Their own random numbers, so the day's other figures stay as they were.
   const q = makeRng(seedOf(`${client}:${day}:issues`));
-  const slots = row.campaigns.flatMap((c, k) => Array(c.paidLeads).fill(k));
-  picks.filter(p => p.paid).forEach((p, j) => {
-    p.camp = slots[j];
+  picks.filter(p => p.paid).forEach(p => {
     if (q() < 0.03) { p.lost = true; row.campaigns[p.camp].paidLeads--; }
   });
   picks.forEach((p, i) => { if (i && p.outcome === 'open' && q() < 0.04) p.dupeOf = Math.floor(q() * i); });
@@ -322,7 +332,9 @@ export function periodFigures(client, run, period, now, back = 0, dayVs = 'week'
   const live = r.current ? liveToday(client, asOf, runRows, run.leadList, r.cmp.to) : null;
   // today's account and Meta problems count once the day is over, except on a run day: the run has already read them
   const todayRow = live && { day: today, ...live.totals, campaigns: live.campaigns, simulated: !runToday, partial: true,
-    spendGap: runToday?.spendGap ?? 0, metaMissed: runToday?.metaMissed ?? 0, metaRejected: runToday?.metaRejected ?? 0 };
+    // (the gap in proportion to the spend so far)
+    spendGap: runToday?.spend ? dMoney((runToday.spendGap || 0) * (live.totals.spend / runToday.spend)) : 0,
+    metaMissed: runToday?.metaMissed ?? 0, metaRejected: runToday?.metaRejected ?? 0 };
   const whole = (from, to) => daySeries(client, from, r.current ? addDays(to, -1) : to, runRows);
   const days = [...whole(r.from, r.to), ...(live ? [todayRow] : [])];
   const cmpDays = [...whole(r.cmp.from, r.cmp.to), ...(live ? [{ day: r.cmp.to, ...live.before.totals }] : [])];
