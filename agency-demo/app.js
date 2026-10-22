@@ -151,7 +151,7 @@ export function rangeText(from, to) {
 
 // What the dashboard shows for one client and one period. Week is the run's report; day, month and year
 // are added up from daily totals (the run's real days plus made-up history); live is today so far.
-export function periodView(report, c, period, today, now = new Date()) {
+export function periodView(report, c, period, today, now = new Date(), dayVs = 'week') {
   const weekStart = dayKey(report.weekStart);
   const runRows = c.days ?? [];
   const kpisOf = rows => kpisFromTotals(c.client, sumDays(rows));
@@ -175,6 +175,13 @@ export function periodView(report, c, period, today, now = new Date()) {
       note: `Today so far, as of ${asOf} UTC · provisional until the day closes · compared with the same time last ${weekday} · made-up live feed` };
   }
   const r = periodRange(period, today, weekStart);
+  // Day is compared with the same weekday a week before (weekends are quieter), or with the day before if asked
+  let cmpText = rangeText(r.cmp.from, r.cmp.to);
+  if (period === 'day') {
+    if (dayVs === 'prev') r.cmp = { from: addDays(r.to, -1), to: addDays(r.to, -1) };
+    const p = parts(r.cmp.from);
+    cmpText = `${WEEKDAYS[new Date(`${r.cmp.from}T00:00:00Z`).getUTCDay()]} ${p.d} ${MONTHS[p.m - 1]} (${dayVs === 'prev' ? 'the day before' : 'same day last week'})`;
+  }
   const rows = daySeries(c.client, period === 'day' ? addDays(r.to, -13) : r.from, r.to, runRows);
   const inPeriodRows = rows.filter(d => d.day >= r.from);
   const cmpRows = daySeries(c.client, r.cmp.from, r.cmp.to, runRows);
@@ -184,7 +191,7 @@ export function periodView(report, c, period, today, now = new Date()) {
   return { kpis, changes: pctChanges(kpis, before), before, rows, campaigns: sumCampaigns(inPeriodRows, c.client), report: false, to: r.to, highlight: period === 'day' ? r.to : undefined,
     leads: periodLeads(c.client, r.from, r.to, runRows, c.leadList), budget: budgetFor(c.client, period, r.to),
     leadsTitle: period === 'day' ? `Leads on ${rangeText(r.from, r.to)}` : `Leads this ${period}`,
-    note: `${rangeText(r.from, r.to)} · compared with ${rangeText(r.cmp.from, r.cmp.to)}${madeUp}` };
+    note: `${rangeText(r.from, r.to)} · compared with ${cmpText}${madeUp}` };
 }
 
 const ordinal = n => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
@@ -461,7 +468,7 @@ function dashboard(report, problems) {
   const body = h('div', { class: 'dbody', 'aria-live': 'off' });
   // the address keeps the client and period, so a refresh or a shared link opens the same view
   const want = parseHash(location.hash);
-  const state = { ci: Math.max(0, report.clients.findIndex(c => c.client === want.client)), period: want.period ?? 'week' };
+  const state = { ci: Math.max(0, report.clients.findIndex(c => c.client === want.client)), period: want.period ?? 'week', dayVs: 'week' };
   const tabs = report.clients.map(c => h('button', { type: 'button', role: 'tab' }, h('i', { class: `ldot ${c.light}` }), c.name));
   const pbtns = PERIODS.map(([key, label]) => h('button', { type: 'button', 'data-p': key },
     key === 'live' ? h('i', { class: 'livedot' }) : null, label));
@@ -470,8 +477,19 @@ function dashboard(report, problems) {
     pbtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === state.period)));
     const c = report.clients[state.ci];
     history.replaceState(null, '', hashFor(c.client, state.period));
-    const pv = periodView(report, c, state.period, dayKey(Date.now()));
-    body.replaceChildren(...dashBody(c, problems, pv, state.period));
+    const pv = periodView(report, c, state.period, dayKey(Date.now()), new Date(), state.dayVs);
+    const view = dashBody(c, problems, pv, state.period);
+    // Day only: what yesterday is compared with
+    if (state.period === 'day') {
+      const pick = h('div', { class: 'vs', role: 'group', 'aria-label': 'Compare with' }, h('span', {}, 'Compare with'),
+        [['week', 'Same day last week'], ['prev', 'Day before']].map(([key, label]) => {
+          const b = h('button', { type: 'button', 'aria-pressed': String(state.dayVs === key) }, label);
+          b.addEventListener('click', () => { state.dayVs = key; draw(); body.querySelector('.vs [aria-pressed="true"]')?.focus(); });
+          return b;
+        }));
+      view[0].querySelector('.pnote').after(pick);
+    }
+    body.replaceChildren(...view);
     clearInterval(liveTimer);
     // live numbers refresh every 30 s while Live is open
     // (skipped while someone is reading a chart, so focus and tooltips aren't lost)

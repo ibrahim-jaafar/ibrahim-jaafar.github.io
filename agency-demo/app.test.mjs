@@ -422,3 +422,13 @@ test('CSV file names are plain and say what they hold', () => {
 test('cost per click with no clicks shows a dash in the CSV, not a number', () => {
   assert.equal(csvFor([{ day: '2026-10-12', leads: 0, paidLeads: 0, conversions: 0, cancelled: 0, revenue: 0, spend: 3, impressions: 0, clicks: 0 }], 'clinic').split('\n')[1].split(',')[9], '');
 });
+
+test('Day says which day it is compared with, and can compare with the day before', () => {
+  const week = periodView(rep, storeC(), 'day', '2026-10-22');
+  assert.match(week.note, /^21 Oct 2026 · compared with Wednesday 14 Oct \(same day last week\)/);
+  const prev = periodView(rep, storeC(), 'day', '2026-10-22', new Date(), 'prev');
+  assert.match(prev.note, /^21 Oct 2026 · compared with Tuesday 20 Oct \(the day before\)/);
+  assert.deepEqual(prev.before, kpisFromTotals('store', sumDays(daySeries('store', '2026-10-20', '2026-10-20', runRows))));
+  // the switch only changes Day
+  assert.equal(periodView(rep, storeC(), 'month', '2026-10-22', new Date(), 'prev').note, periodView(rep, storeC(), 'month', '2026-10-22').note);
+});
