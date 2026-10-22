@@ -625,7 +625,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
     <p class="meta">Live · n8n · GoHighLevel API · Meta Conversions API · Gemini</p>
     <p>A weekly marketing report for two made-up agency clients, a skin clinic and a home-goods store. It pulls each client's leads and ad spend, sends conversions to Meta, checks the data for mistakes in plain code, and writes a short summary a client can read. Visitors can run it on clean data or break the data on purpose and see what the checks catch, then explore the results on a client dashboard.</p>
     <ul>
-      <li><b>Client dashboard:</b> each client gets a dashboard like a real agency report: spend, cost per click, leads, cost per lead and results, each with its change (green when it's good news), a funnel from impressions to bookings or orders, spend per campaign, charts, the week's leads and a CSV download. Day, week, month and year views are added up from daily totals, with costs and rates worked out again from the sums, never averaged, and a Live view shows today so far. Impressions, clicks and spend, the history outside the run's week and the live feed are simulated and labelled as such.</li>
+      <li><b>Client dashboard:</b> each client gets a dashboard like a real agency report: spend, cost per click, leads, cost per lead and results, each with its change (green when it's good news), a funnel from impressions to bookings or orders, spend and cost per lead for each campaign, spend against a budget, charts, the leads behind each view and a CSV download. Day, week, month and year views are added up from daily totals, with costs and rates worked out again from the sums, never averaged, and a Live view shows today so far. Impressions, clicks and spend, the budgets, the history outside the run's week and the live feed are simulated and labelled as such.</li>
       <li><b>Checks in code, not AI:</b> leads with no source, duplicates written differently (+961 vs 0, capital letters), Meta and CRM not matching, totals that don't add up, unusually large orders and events Meta rejects.</li>
       <li><b>Edge cases handled:</b> an empty week shows "no leads yet" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.</li>
       <li><b>Private by design:</b> the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.</li>
@@ -633,7 +633,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
       <li><b>Live:</b> two n8n workflows on a free server: one plays the customers and saves them in a GoHighLevel sandbox; the other, the report a real client would get, reads them back, sends the conversions to Meta's Conversions API, asks Gemini for the summary, and posts an alert to Slack when a check fires or a run fails. The logic is covered by 180 automated tests.</li>
     </ul>
     <p><a class="btn primary" href="agency-demo/">Try the demo →</a></p>
-    <div class="shots"><img src="img/agency-demo.webp" alt="Agency report demo: client dashboard, month view, with funnel and charts" loading="lazy"></div>
+    <div class="shots"><img src="img/agency-demo.webp" alt="Agency report demo: client dashboard, month view, with budget, funnel, campaigns and charts" loading="lazy"></div>
   </div>
 
   <div class="card">
