@@ -208,7 +208,7 @@ export function pickAiAnswer(replies, input, broken = false) {
   for (const r of replies) {
     let raw = r?.statusCode === 200 ? r.body?.choices?.[0]?.message?.content : null;
     if (raw != null && broken) raw = "Sorry, I can't help with that.";
-    if (raw == null) { errors.push(`AI service answered ${r?.statusCode ?? 'nothing'}`); continue; }
+    if (raw == null) { errors.push(r?.statusCode ? `AI service answered ${r.statusCode}` : /timeout/i.test(r?.error?.message ?? '') ? 'AI service timed out' : 'AI service answered nothing'); continue; }
     gotAnswer = true;
     const v = validateAiOutput(raw, input);
     if (v.ok) return { value: v.value, gotAnswer, errors };
