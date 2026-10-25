@@ -23,7 +23,7 @@ I turn complex operational problems into reliable AI systems, including workflow
 
 ## Current role: AI Specialist, Blue House Films (September 2026 – present, remote)
 
-Blue House Films is a film and social media company of about 100 people. I was hired to help the team work faster and more accurately with less repetitive work. I replaced scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks.
+Blue House Films is a film and social media company of about 100 people. I was hired to help the team work faster and more accurately with less repetitive work. I replaced scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks. On a typical day 50–60 staff use the platform: about 55 use Chat, 50 the Task Manager and 15 the SRT Cleaner.
 
 As the main developer on the 3-person R&D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub and automated backups. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers. I discover what to build by sitting with each employee and having them walk me through their workflow, then analysing where their time and errors go.
 
