@@ -118,11 +118,11 @@ A news-intelligence engine for the company's newsrooms.
 - Planned by studying a leading commercial tool (NewsWhip Spike) feature by feature. About 9,500 lines with 257 automated tests.
 - Tech: Django, PostgreSQL + pgvector, React, AI embeddings.
 
-### Insert Suggester (in progress)
+### Insert Suggester (working, moving into the company platform)
 
 An AI tool for script writers, designed to read each block of a video script, work out what it's really about, and propose visual inserts (videos, images, articles, X and Telegram posts) through live search, guided by a bank of past scripts. Candidates are judged by looking at their actual video frames.
 
-The version built by an intern didn't work reliably, so I reviewed its whole codebase, mapped its logic into a diagram and logged about 40 problems. I'm fixing them one by one, each with tests: for example strict JSON schemas for every AI step, multilingual embeddings for the script bank, and dates that are never copied from another event.
+The version built by an intern didn't work reliably, so I reviewed its whole codebase, mapped its logic into a diagram and found 82 problems. I worked through them and reworked large parts of how it plans, searches and judges, each fix with tests: for example strict JSON schemas for every AI step, multilingual embeddings for the script bank, and dates that are never copied from another event. It now works, and I'm moving it into the company platform.
 
 ## AI agents and automation
 
