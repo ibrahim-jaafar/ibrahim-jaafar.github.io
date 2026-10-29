@@ -6,7 +6,7 @@ Website: https://ibrahim-jaafar.github.io · LinkedIn: https://www.linkedin.com/
 
 I turn complex operational problems into reliable AI systems, including workflow automation, multi-agent systems and secure internal platforms, and take them from first prototype to daily production use.
 
-- AI Specialist at Blue House Films, a film and social media company of about 100 people, since September 2026. Main developer on its 3-person R&D team. Shipped 9 internal tools to production in my first six weeks.
+- AI Specialist at Blue House Films, a film and social media company of about 100 people, since September 2026. Main developer on its 3-person R&D team. Shipped 9 internal tools to production in my first six weeks, and kept building more since.
 - I build and run my own multi-agent system (Hermes Agent on Telegram), used almost every day.
 - 5+ years in engineering and manufacturing at Ghandour Solutions before moving into AI.
 - Building with AI since ChatGPT's first release in late 2022.
@@ -23,7 +23,7 @@ I turn complex operational problems into reliable AI systems, including workflow
 
 ## Current role: AI Specialist, Blue House Films (September 2026 – present, remote)
 
-Blue House Films is a film and social media company of about 100 people. I was hired to help the team work faster and more accurately with less repetitive work. I replaced scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks. On a typical day 50–60 staff use the platform: about 55 use Chat, 50 the Task Manager and 15 the SRT Cleaner.
+Blue House Films is a film and social media company of about 100 people. I was hired to help the team work faster and more accurately with less repetitive work. I replaced scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks, and I've kept building more since. On a typical day 50–60 staff use the platform: about 55 use Chat, 50 the Task Manager and 15 the SRT Cleaner.
 
 As the main developer on the 3-person R&D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub and automated backups. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers. I discover what to build by sitting with each employee and having them walk me through their workflow, then analysing where their time and errors go.
 
@@ -118,11 +118,11 @@ A news-intelligence engine for the company's newsrooms.
 - Planned by studying a leading commercial tool (NewsWhip Spike) feature by feature. About 9,500 lines with 257 automated tests.
 - Tech: Django, PostgreSQL + pgvector, React, AI embeddings.
 
-### Insert Suggester (working, moving into the company platform)
+### Insert Suggester (working, going into production)
 
 An AI tool for script writers, designed to read each block of a video script, work out what it's really about, and propose visual inserts (videos, images, articles, X and Telegram posts) through live search, guided by a bank of past scripts. Candidates are judged by looking at their actual video frames.
 
-The version built by an intern didn't work reliably, so I reviewed its whole codebase, mapped its logic into a diagram and found 82 problems. I worked through them and reworked large parts of how it plans, searches and judges, each fix with tests: for example strict JSON schemas for every AI step, multilingual embeddings for the script bank, and dates that are never copied from another event. It now works, and I'm moving it into the company platform.
+The version built by an intern didn't work reliably, so I reviewed its whole codebase, mapped its logic into a diagram and found 82 problems. I worked through them and reworked large parts of how it plans, searches and judges, each fix with tests: for example strict JSON schemas for every AI step, multilingual embeddings for the script bank, and dates that are never copied from another event. It now works and is going into production on the company platform.
 
 ## AI agents and automation
 
