@@ -1,5 +1,5 @@
 // Data checks: plain code, never AI. Each warning's message is written for a client.
-import { normalisePhone, normaliseEmail, inPeriod } from './leads.js';
+import { normalisePhone, normaliseEmail, inPeriod, median } from './leads.js';
 
 const OUTLIER_FACTOR = 5;
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
@@ -28,9 +28,9 @@ function warningsFrom(client, f) {
       message: `The ad account's total spend (${usd(f.reported)}) doesn't match the sum of its campaigns (${usd(f.sum)}), so some data may be missing.` });
   }
   if (client === 'store' && f.conv.length >= 3) {
-    const vals = f.conv.map(l => l.value).sort((a, b) => a - b);
-    const median = vals[Math.floor(vals.length / 2)];
-    const big = f.conv.filter(l => l.value > OUTLIER_FACTOR * median);
+    // each order against the median of the others, so a big order can't raise its own bar
+    // ponytail: one sort per order, fine for a week's orders; a running median if a period ever holds thousands
+    const big = f.conv.filter(l => l.value > OUTLIER_FACTOR * median(f.conv.filter(o => o !== l).map(o => o.value)));
     if (big.length) {
       out.push({ code: 'outlier', count: big.length,
         message: `${plural(big.length, 'order is', 'orders are')} unusually large (over ${OUTLIER_FACTOR}× a typical order). Worth confirming before it's counted in results.` });

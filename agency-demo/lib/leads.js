@@ -18,6 +18,8 @@ export const pickWeighted = (rng, ws) => {
   return i;
 };
 const CONSULT_FEE = 150;
+// the middle value; with an even count, the average of the two middle ones
+export const median = xs => { const v = [...xs].sort((a, b) => a - b), m = v.length >> 1; return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2; };
 // How enquiries spread over the day (UTC hours): quiet at night, busy late morning and evening.
 export const HOUR_CURVE = [1, 0.6, 0.4, 0.3, 0.3, 0.5, 1, 2, 3.5, 5, 6, 6.5, 6, 6, 5.5, 5.5, 6, 6.5, 7, 7, 6, 4.5, 3, 2];
 const CURVE_TOTAL = HOUR_CURVE.reduce((a, w) => a + w, 0);
@@ -137,11 +139,10 @@ export function generateLeads(client, problems, rng, weekStart, now = +weekStart
       leads.push({ ...make(leads.length), createdAt: new Date(t).toISOString(), outcome: 'open', value: 0, flags: ['boundary'] });
     }
     if (client === 'store') {
-      // enough normal orders to have a median, then one 10x outlier
+      // enough normal orders to have a median, then one 10x the median of the others (the check's own measure)
       for (let i = 0; i < 3; i++) add({ outcome: 'converted', value: between(80, 300) });
-      const vals = leads.filter(l => l.outcome === 'converted').map(l => l.value).sort((a, b) => a - b);
-      const median = vals[Math.floor(vals.length / 2)];
-      leads.push({ ...make(leads.length), outcome: 'converted', value: median * 10, flags: ['outlier'] });
+      const others = leads.filter(l => l.outcome === 'converted').map(l => l.value);
+      leads.push({ ...make(leads.length), outcome: 'converted', value: Math.round(median(others) * 10), flags: ['outlier'] });
     }
   }
 
