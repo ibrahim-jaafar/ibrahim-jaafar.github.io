@@ -120,7 +120,7 @@ A news-intelligence engine for the company's newsrooms.
 
 ### Insert Suggester
 
-An AI tool for script writers, designed to read each block of a video script, work out what it's really about, and propose visual inserts (videos, images, articles, X and Telegram posts) through live search, guided by a bank of past scripts. Candidates are judged by looking at their actual video frames.
+An AI tool for script writers, designed to read each block of a video script, work out what it's really about, and propose visual inserts (videos, images, articles, X and Telegram posts) through live search, guided by a bank of past scripts. Candidates are judged by looking at their actual video frames. When the editor is done, the tool writes the chosen inserts straight into the script's Google Doc. It uses the Google Docs API through a company Google service account (a robot account the doc is shared with), and the platform keeps that account's key, so the tool itself never holds it. The export adds a two-column table at the end of the doc in one batch: each part of the script, highlighted, next to its chosen links and the editor's notes.
 
 The version built by an intern didn't work reliably, so I reviewed its whole codebase, mapped its logic into a diagram and found 82 problems. I worked through them and reworked large parts of how it plans, searches and judges, each fix with tests: for example strict JSON schemas for every AI step, multilingual embeddings for the script bank, and dates that are never copied from another event.
 
