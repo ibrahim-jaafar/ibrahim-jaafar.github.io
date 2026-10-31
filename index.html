@@ -163,6 +163,10 @@ li::marker{color:var(--a2)}
 .eyebrow{display:inline-block;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:#c4b5fd;padding:5px 12px;border:1px solid rgba(124,92,255,.4);border-radius:999px;background:rgba(124,92,255,.12);margin-bottom:16px}
 .featured-title{font-size:clamp(24px,3vw,30px);margin-bottom:10px}
 .featured .sub{margin-bottom:24px}
+/* project groups inside Projects */
+.group{margin-top:56px}
+.group > .featured-title{margin-top:0}
+.outline a.nested{padding-left:26px;font-size:12px}
 /* compact project boxes; full card opens in a dialog */
 .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
 .tile{all:unset;box-sizing:border-box;display:flex;flex-direction:column;cursor:pointer;padding:20px;border:1px solid var(--line);border-radius:18px;background:var(--glass);backdrop-filter:blur(10px);transition:transform .25s,border-color .25s,box-shadow .25s}
@@ -286,9 +290,11 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   <a href="#about">About</a>
   <a href="#process">How I work</a>
   <a href="#projects">Projects</a>
-  <a href="#agents">AI agents</a>
+  <a class="nested" href="#work">Blue House</a>
+  <a class="nested" href="#agents">AI agents</a>
+  <a class="nested" href="#more">Other projects</a>
+  <a class="nested" href="#engineering">Engineering</a>
   <a href="#training">Training</a>
-  <a href="#engineering">Engineering</a>
   <a href="#skills">Tools</a>
   <a href="#experience">Experience</a>
   <a href="#contact">Contact</a>
@@ -341,9 +347,9 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   </div>
 </div></section>
 
-<section id="projects" data-tiles><div class="wrap">
-  <h2>Selected projects</h2>
-  <p class="sub">Company platforms, AI content generation, computer vision, data and engineering tools.</p>
+<section id="projects"><div class="wrap">
+  <h2>Projects</h2>
+  <p class="sub">Company platforms, AI agents, AI content generation, computer vision, data and engineering tools.</p>
 
   <div class="featured" id="work" data-tiles>
   <span class="eyebrow">Featured · current role</span>
@@ -492,7 +498,69 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   </div>
   </div>
 
-  <div class="tiles"></div>
+<div class="group" id="agents" data-tiles>
+  <h3 class="featured-title">AI agents and automation</h3>
+  <p class="sub">I've been building with AI since ChatGPT first came out in late 2022. Today I use Claude Code and other agentic tools every day, and I build my own agents for jobs that would otherwise take hours by hand.</p>
+
+  <div class="card" data-demo="agency-demo/">
+    <h3>Agency report automation (live demo)</h3>
+    <p class="meta">Live · n8n · GoHighLevel API · Meta Conversions API · Gemini</p>
+    <p>A marketing report for two made-up agency clients, a skin clinic and a home-goods store. It pulls each client's leads and ad spend, sends conversions to Meta, checks the data for mistakes in plain code, and writes a short summary a client can read, for any day, week, month or year. Visitors can run it on clean data or break the data on purpose and see what the checks catch, explore the results on a client dashboard, and send test leads to watch them arrive.</p>
+    <ul>
+      <li><b>Client dashboard:</b> each client gets a dashboard like a real agency report: spend, cost per click, leads, cost per lead and results, each with its change (green when it's good news), a funnel from impressions to bookings or orders, spend and cost per lead for each campaign, spend against a budget, charts, data health, the leads behind each view and a CSV download. Day, week, month and year views open on the current period so far, updating live, with arrows to step back to earlier ones; they are added up from daily totals, with costs and rates worked out again from the sums, never averaged. Impressions, clicks and spend, the budgets and the history outside the run's 7 days are simulated and labelled as such.</li>
+      <li><b>Checks in code, not AI:</b> leads with no source, duplicates written differently (+961 vs 0, capital letters), Meta and CRM not matching, totals that don't add up, unusually large orders and events Meta rejects. They run on whatever period is on screen, with the same code as the run.</li>
+      <li><b>Edge cases handled:</b> an empty week shows "no leads" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.</li>
+      <li><b>Private by design:</b> the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.</li>
+      <li><b>AI on request, kept honest:</b> a summary of whatever period is on screen, written when asked; the server works out the figures itself. It never types a number; it writes placeholders, each next to its own label, and the code fills in the real values. Its answer must also follow a strict JSON schema. A broken answer is refused and a template summary is used instead.</li>
+      <li><b>Live:</b> n8n workflows on a free server: one plays the customers of the last 7 days and saves them in a GoHighLevel sandbox; the report a real client would get reads them back, sends the conversions to Meta's Conversions API and posts an alert to Slack when a check fires or a run fails; another asks Gemini for a summary on request, and another sends test leads through GoHighLevel and Meta one at a time. The logic is covered by 200 automated tests.</li>
+    </ul>
+    <p><a class="btn primary" href="agency-demo/">Try the demo →</a></p>
+    <div class="shots"><img src="img/agency-demo.webp" alt="Agency report demo: client dashboard, month view, with the period stepper, budget, funnel and campaigns" loading="lazy"><img src="img/agency-demo-2.webp" alt="Agency report demo: charts, the AI summary written by Gemini with code-filled numbers, and data health warnings" loading="lazy"><img src="img/agency-demo-workflow.webp" alt="The weekly-report workflow in the n8n editor: read each client from GoHighLevel with pause and retry when refused, read again while search is still catching up, save progress, send conversions to Meta, run the checks, build and save the report, send it to Slack" loading="lazy" style="grid-column:1/-1"></div>
+  </div>
+
+  <div class="card">
+    <h3>Hermes multi-agent system on Telegram</h3>
+    <p class="meta">Hermes Agent · Telegram · web scraping · Android emulator automation</p>
+    <p>Four bots, each with its own job. An orchestrator hands out the work and passes requests between them. I use them almost every day, for myself and for friends.</p>
+    <ul>
+      <li><b>Car specialist:</b> takes a licence plate, scrapes the car's details, then uses the VIN to check recalls and cross-check the data on other sites. It then starts an Android emulator, turns on a VPN, opens a specific app and fills in the data to pull the car's history, with no manual steps.</li>
+      <li><b>Trading analyst:</b> reads the news, pulls live MetaTrader 5 data, backtests strategies, and shows how the news moves the market on a live dashboard.</li>
+      <li><b>Coding bot:</b> writes code in my own style and conventions.</li>
+      <li><b>Orchestrator:</b> delegates tasks and acts as the middle man. For example, when the trading bot needs new code, it routes the request to the coding bot.</li>
+      <li><b>Lean by design:</b> each bot has its own SOUL.md and only the skills and tools its job needs, so it doesn't carry extra context or spend extra tokens.</li>
+      <li><b>Kanban hand-offs:</b> the bots deliver tasks to each other through a shared kanban board, so every hand-off is tracked.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Furniture CAD-to-render pipeline</h3>
+    <p class="meta">Claude Code · Blender MCP · Gemini image generation · SolidWorks</p>
+    <p>Product photos for a furniture line without a photo shoot. Products designed in SolidWorks are placed into photoreal scenes by Gemini image generation. Because image models get the scale of objects wrong, Claude also builds each scene in Blender through MCP, using the real furniture dimensions.</p>
+    <ul>
+      <li>32 reusable scene scripts: importing parts, building rooms, applying materials, lighting and final polish.</li>
+      <li>A written standards library (walls, doors, windows, lighting and camera, furniture clearances) that Claude reads before building, so rooms come out at real-world sizes.</li>
+      <li>Automated checks that measure furniture clearances and catch overlapping objects before rendering.</li>
+      <li>Calibrated scanned fabric materials and Poly Haven textures and lighting for photoreal results.</li>
+    </ul>
+    <div class="shots"><img src="img/render-paravan.webp" alt="Rendered room divider in a living room" loading="lazy"><img src="img/render-room.webp" alt="Rendered reading corner with room divider and armchair" loading="lazy"><img src="img/render-chair.webp" alt="Close-up render of an armchair" loading="lazy"></div>
+  </div>
+
+  <div class="card">
+    <h3>Mosaic: order-to-production system</h3>
+    <p class="meta">Next.js · Supabase · Cloudflare</p>
+    <p>My own furniture business, still in development: an online store with an admin panel. When an order comes in, the system shows exactly which manufacturing files to cut. A strict code covers every part of every product and its variants, so each order maps straight to production.</p>
+    <ul>
+      <li>21 coded designs so far. Each one links its SolidWorks part files and sizes, and each variant records which parts it is cut from.</li>
+      <li>Customers pick the wood or colour for each material, and the price is calculated from real costs: materials, edge banding, hardware, services and markup.</li>
+      <li>Admin sections for materials, suppliers, hardware, delivery, categories and the blog, so the whole business runs from one place.</li>
+      <li>Storefront with shop and product pages, room collections, cart, customer accounts with delivery addresses and order history, and a blog.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="group" id="more" data-tiles>
+  <h3 class="featured-title">Other projects</h3>
+  <p class="sub">AI content generation, computer vision and data tools.</p>
 
   <div class="card">
     <h3>MoneyPrinterTurbo Extended: AI short-video generator</h3>
@@ -585,19 +653,6 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
       <div class="shots"><img src="img/secusearch-1.webp" alt="SecuSearch home" loading="lazy"><img src="img/secusearch-2.webp" alt="SecuSearch results" loading="lazy"></div>
     </div>
     <div class="card">
-      <h3>CurveMill: CNC file optimiser</h3>
-      <p class="meta">Python · PySide6 · C# SolidWorks add-in</p>
-      <p>Internal tool for Ghandour Solutions, built to fix a bottleneck in the company's CNC workflow. It cleans and repairs DXF cutting files and previews how the cutting tool will run. On real files it cut sketch elements from 3,383 to 540, and a 7,014-line pattern down to 274.</p>
-      <ul>
-        <li>Finds sketch faults (open profiles, duplicate lines, shared corner points) and shows each one as a clickable warning that zooms to it.</li>
-        <li>Keeps curves as true splines through import, editing and export, instead of breaking them into small lines.</li>
-        <li>Simulates the endmill cutting along the centre, inside or outside of a path, and repairs small gaps within a set tolerance.</li>
-        <li>A SolidWorks add-in with its own toolbar, plus a pass that rejoins broken curves into whole ones.</li>
-        <li>SolidWorks-style dimensions to place a pattern exactly on the board, a reusable pattern library, and project files to pause and resume a job.</li>
-        <li>About 16,000 lines of Python, covered by 225 automated tests.</li>
-      </ul>
-    </div>
-    <div class="card">
       <h3>Flight incident replay for a journalist</h3>
       <p class="meta">JavaScript · Three.js · uPlot · flight-tracking data</p>
       <p>A journalist investigating the diversion of flydubai flight FZ1073 needed to see what happened. I merged data from two flight-tracking services into an interactive replay with a 3D view, a map, and altitude, speed and climb-rate charts.</p>
@@ -617,83 +672,10 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
       <p>A client of Ghandour Solutions wanted their gate to open automatically for trucks. The system detects and tracks trucks from a live camera and opens the gate through an Arduino relay.</p>
     </div>
   </div>
-</div></section>
+</div>
 
-<section id="agents" data-tiles><div class="wrap">
-  <h2>AI agents and automation</h2>
-  <p class="sub">I've been building with AI since ChatGPT first came out in late 2022. Today I use Claude Code and other agentic tools every day, and I build my own agents for jobs that would otherwise take hours by hand.</p>
-
-  <div class="card" data-demo="agency-demo/">
-    <h3>Agency report automation (live demo)</h3>
-    <p class="meta">Live · n8n · GoHighLevel API · Meta Conversions API · Gemini</p>
-    <p>A marketing report for two made-up agency clients, a skin clinic and a home-goods store. It pulls each client's leads and ad spend, sends conversions to Meta, checks the data for mistakes in plain code, and writes a short summary a client can read, for any day, week, month or year. Visitors can run it on clean data or break the data on purpose and see what the checks catch, explore the results on a client dashboard, and send test leads to watch them arrive.</p>
-    <ul>
-      <li><b>Client dashboard:</b> each client gets a dashboard like a real agency report: spend, cost per click, leads, cost per lead and results, each with its change (green when it's good news), a funnel from impressions to bookings or orders, spend and cost per lead for each campaign, spend against a budget, charts, data health, the leads behind each view and a CSV download. Day, week, month and year views open on the current period so far, updating live, with arrows to step back to earlier ones; they are added up from daily totals, with costs and rates worked out again from the sums, never averaged. Impressions, clicks and spend, the budgets and the history outside the run's 7 days are simulated and labelled as such.</li>
-      <li><b>Checks in code, not AI:</b> leads with no source, duplicates written differently (+961 vs 0, capital letters), Meta and CRM not matching, totals that don't add up, unusually large orders and events Meta rejects. They run on whatever period is on screen, with the same code as the run.</li>
-      <li><b>Edge cases handled:</b> an empty week shows "no leads" instead of dividing by zero, organic leads don't skew cost per lead, cancelled bookings are left out, and Arabic or emoji names survive hashing.</li>
-      <li><b>Private by design:</b> the AI only sees totals and warnings, never names, phones or emails. Personal fields sent to Meta are SHA-256 hashed.</li>
-      <li><b>AI on request, kept honest:</b> a summary of whatever period is on screen, written when asked; the server works out the figures itself. It never types a number; it writes placeholders, each next to its own label, and the code fills in the real values. Its answer must also follow a strict JSON schema. A broken answer is refused and a template summary is used instead.</li>
-      <li><b>Live:</b> n8n workflows on a free server: one plays the customers of the last 7 days and saves them in a GoHighLevel sandbox; the report a real client would get reads them back, sends the conversions to Meta's Conversions API and posts an alert to Slack when a check fires or a run fails; another asks Gemini for a summary on request, and another sends test leads through GoHighLevel and Meta one at a time. The logic is covered by 200 automated tests.</li>
-    </ul>
-    <p><a class="btn primary" href="agency-demo/">Try the demo →</a></p>
-    <div class="shots"><img src="img/agency-demo.webp" alt="Agency report demo: client dashboard, month view, with the period stepper, budget, funnel and campaigns" loading="lazy"><img src="img/agency-demo-2.webp" alt="Agency report demo: charts, the AI summary written by Gemini with code-filled numbers, and data health warnings" loading="lazy"><img src="img/agency-demo-workflow.webp" alt="The weekly-report workflow in the n8n editor: read each client from GoHighLevel with pause and retry when refused, read again while search is still catching up, save progress, send conversions to Meta, run the checks, build and save the report, send it to Slack" loading="lazy" style="grid-column:1/-1"></div>
-  </div>
-
-  <div class="card">
-    <h3>Hermes multi-agent system on Telegram</h3>
-    <p class="meta">Hermes Agent · Telegram · web scraping · Android emulator automation</p>
-    <p>Four bots, each with its own job. An orchestrator hands out the work and passes requests between them. I use them almost every day, for myself and for friends.</p>
-    <ul>
-      <li><b>Car specialist:</b> takes a licence plate, scrapes the car's details, then uses the VIN to check recalls and cross-check the data on other sites. It then starts an Android emulator, turns on a VPN, opens a specific app and fills in the data to pull the car's history, with no manual steps.</li>
-      <li><b>Trading analyst:</b> reads the news, pulls live MetaTrader 5 data, backtests strategies, and shows how the news moves the market on a live dashboard.</li>
-      <li><b>Coding bot:</b> writes code in my own style and conventions.</li>
-      <li><b>Orchestrator:</b> delegates tasks and acts as the middle man. For example, when the trading bot needs new code, it routes the request to the coding bot.</li>
-      <li><b>Lean by design:</b> each bot has its own SOUL.md and only the skills and tools its job needs, so it doesn't carry extra context or spend extra tokens.</li>
-      <li><b>Kanban hand-offs:</b> the bots deliver tasks to each other through a shared kanban board, so every hand-off is tracked.</li>
-    </ul>
-  </div>
-
-  <div class="card">
-    <h3>Furniture CAD-to-render pipeline</h3>
-    <p class="meta">Claude Code · Blender MCP · Gemini image generation · SolidWorks</p>
-    <p>Product photos for a furniture line without a photo shoot. Products designed in SolidWorks are placed into photoreal scenes by Gemini image generation. Because image models get the scale of objects wrong, Claude also builds each scene in Blender through MCP, using the real furniture dimensions.</p>
-    <ul>
-      <li>32 reusable scene scripts: importing parts, building rooms, applying materials, lighting and final polish.</li>
-      <li>A written standards library (walls, doors, windows, lighting and camera, furniture clearances) that Claude reads before building, so rooms come out at real-world sizes.</li>
-      <li>Automated checks that measure furniture clearances and catch overlapping objects before rendering.</li>
-      <li>Calibrated scanned fabric materials and Poly Haven textures and lighting for photoreal results.</li>
-    </ul>
-    <div class="shots"><img src="img/render-paravan.webp" alt="Rendered room divider in a living room" loading="lazy"><img src="img/render-room.webp" alt="Rendered reading corner with room divider and armchair" loading="lazy"><img src="img/render-chair.webp" alt="Close-up render of an armchair" loading="lazy"></div>
-  </div>
-
-  <div class="card">
-    <h3>Mosaic: order-to-production system</h3>
-    <p class="meta">Next.js · Supabase · Cloudflare</p>
-    <p>My own furniture business, still in development: an online store with an admin panel. When an order comes in, the system shows exactly which manufacturing files to cut. A strict code covers every part of every product and its variants, so each order maps straight to production.</p>
-    <ul>
-      <li>21 coded designs so far. Each one links its SolidWorks part files and sizes, and each variant records which parts it is cut from.</li>
-      <li>Customers pick the wood or colour for each material, and the price is calculated from real costs: materials, edge banding, hardware, services and markup.</li>
-      <li>Admin sections for materials, suppliers, hardware, delivery, categories and the blog, so the whole business runs from one place.</li>
-      <li>Storefront with shop and product pages, room collections, cart, customer accounts with delivery addresses and order history, and a blog.</li>
-    </ul>
-  </div>
-</div></section>
-
-<section id="training"><div class="wrap">
-  <h2>Training</h2>
-  <p class="sub">I run regular AI workshops for developers. Here is one of them.</p>
-
-  <div class="card">
-    <h3>Running AI on your own computer</h3>
-    <p class="meta">Workshop · 36 slides · 2026</p>
-    <p>A beginner workshop on running open-source AI models locally: what hardware a model needs and how fast it will run, choosing between Ollama, llama.cpp and vLLM, what compression (quantization) does and how to read names like Q4_K_M, picking the right file on Hugging Face, checking licences, and running a first model.</p>
-    <p><a class="btn primary" href="training/running-ai-on-your-own-computer.pdf" target="_blank" rel="noopener">View the slides (PDF) →</a></p>
-    <div class="shots" style="max-width:560px"><img src="img/training-local-ai.webp" alt="Title slide of the workshop: Running AI on your own computer, with the layers from your answer down to the model, engine and hardware" loading="lazy"></div>
-  </div>
-</div></section>
-
-<section id="engineering" data-tiles><div class="wrap">
-  <h2>Engineering and 3D</h2>
+<div class="group" id="engineering" data-tiles>
+  <h3 class="featured-title">Engineering and 3D</h3>
   <p class="sub">My background is in mechanical design and manufacturing, and I still build software for it.</p>
 
   <div class="card">
@@ -715,10 +697,38 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
       <div class="shots"><img src="img/car-1.webp" alt="3D vehicle viewer showing an electric car" loading="lazy"><img src="img/car-2.webp" alt="3D vehicle viewer, rear view" loading="lazy"></div>
     </div>
     <div class="card">
+      <h3>CurveMill: CNC file optimiser</h3>
+      <p class="meta">Python · PySide6 · C# SolidWorks add-in</p>
+      <p>Internal tool for Ghandour Solutions, built to fix a bottleneck in the company's CNC workflow. It cleans and repairs DXF cutting files and previews how the cutting tool will run. On real files it cut sketch elements from 3,383 to 540, and a 7,014-line pattern down to 274.</p>
+      <ul>
+        <li>Finds sketch faults (open profiles, duplicate lines, shared corner points) and shows each one as a clickable warning that zooms to it.</li>
+        <li>Keeps curves as true splines through import, editing and export, instead of breaking them into small lines.</li>
+        <li>Simulates the endmill cutting along the centre, inside or outside of a path, and repairs small gaps within a set tolerance.</li>
+        <li>A SolidWorks add-in with its own toolbar, plus a pass that rejoins broken curves into whole ones.</li>
+        <li>SolidWorks-style dimensions to place a pattern exactly on the board, a reusable pattern library, and project files to pause and resume a job.</li>
+        <li>About 16,000 lines of Python, covered by 225 automated tests.</li>
+      </ul>
+    </div>
+    <div class="card">
       <h3>Electronics and home automation</h3>
       <p class="meta">Arduino · Raspberry Pi · Sonoff · sensors</p>
       <p>Home automation for energy metering, automated curtains, climate control and safety, plus Arduino and Raspberry Pi prototypes that connect software to real hardware.</p>
     </div>
+  </div>
+</div>
+
+</div></section>
+
+<section id="training"><div class="wrap">
+  <h2>Training</h2>
+  <p class="sub">I run regular AI workshops for developers. Here is one of them.</p>
+
+  <div class="card">
+    <h3>Running AI on your own computer</h3>
+    <p class="meta">Workshop · 36 slides · 2026</p>
+    <p>A beginner workshop on running open-source AI models locally: what hardware a model needs and how fast it will run, choosing between Ollama, llama.cpp and vLLM, what compression (quantization) does and how to read names like Q4_K_M, picking the right file on Hugging Face, checking licences, and running a first model.</p>
+    <p><a class="btn primary" href="training/running-ai-on-your-own-computer.pdf" target="_blank" rel="noopener">View the slides (PDF) →</a></p>
+    <div class="shots" style="max-width:560px"><img src="img/training-local-ai.webp" alt="Title slide of the workshop: Running AI on your own computer, with the layers from your answer down to the model, engine and hardware" loading="lazy"></div>
   </div>
 </div></section>
 
