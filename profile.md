@@ -313,25 +313,25 @@ Home automation for energy metering, automated curtains, climate control and saf
 
 I run regular AI workshops for developers. Here are some of them.
 
-### Running AI on your own computer (workshop, 36 slides, 2026)
+### Running AI on your own computer (workshop, 36 slides)
 
 A beginner workshop on running open-source AI models locally: what hardware a model needs and how fast it will run, choosing between Ollama, llama.cpp and vLLM, what compression (quantization) does and how to read names like Q4_K_M, picking the right file on Hugging Face, checking licences, and running a first model.
 
 - Slides (PDF): https://ibrahim-jaafar.github.io/training/running-ai-on-your-own-computer.pdf
 
-### Keeping your data private with AI (workshop, 31 slides, 2026)
+### Keeping your data private with AI (workshop, 31 slides)
 
 A beginner workshop on keeping data private when using AI: where a prompt goes and who can see it, privacy options ranked from your own computer to free apps, Zero Data Retention and its catch, how to apply for it with each provider, and daily habits.
 
 - Slides (PDF): https://ibrahim-jaafar.github.io/training/keeping-your-data-private-with-ai.pdf
 
-### HIPAA and AI: a beginner's guide (workshop, 25 slides, 2026)
+### HIPAA and AI: a beginner's guide (workshop, 25 slides)
 
 A beginner workshop on HIPAA and AI: what HIPAA is, what counts as patient data (PHI) and what doesn't, how HIPAA applies to AI tools, signing a BAA with each AI provider, and options for building and coding with AI safely.
 
 - Slides (PDF): https://ibrahim-jaafar.github.io/training/hipaa-and-ai-a-beginners-guide.pdf
 
-### Meta ads and HIPAA (workshop, 19 slides, 2026)
+### Meta ads and HIPAA (workshop, 19 slides)
 
 A beginner workshop on Meta ads for healthcare: how patient data can reach Meta through the pixel and Conversions API, the main risks and Meta's own rules, real cases and the rules today, and a checklist for running Meta ads safely.
 
