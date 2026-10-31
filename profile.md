@@ -331,7 +331,7 @@ A beginner workshop on HIPAA and AI: what HIPAA is, what counts as patient data 
 
 - Slides (PDF): https://ibrahim-jaafar.github.io/training/hipaa-and-ai-a-beginners-guide.pdf
 
-### Meta ads and HIPAA (workshop, 17 slides, 2026)
+### Meta ads and HIPAA (workshop, 19 slides, 2026)
 
 A beginner workshop on Meta ads for healthcare: how patient data can reach Meta through the pixel and Conversions API, the main risks and Meta's own rules, real cases and the rules today, and a checklist for running Meta ads safely.
 
