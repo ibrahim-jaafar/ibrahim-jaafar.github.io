@@ -37,7 +37,7 @@ As the main developer on the 3-person R&D team, I own the platform end to end. I
 - Role-based access control: each employee sees only the data their role allows.
 - Plugin design, so each tool (HR, tasks, chat, mail) can be built and shipped on its own.
 - Self-hosted on an Oracle server, with backups to Cloudflare R2.
-- Developer documentation: architecture guide, plugin guide, runbook and architecture decision records, so other developers can build plugins on their own. User guides are next.
+- Developer documentation: architecture guide, plugin guide, runbook and architecture decision records, so other developers can build plugins on their own.
 - On-laptop AI: plugins can run AI models on employees' own laptops. Models download into a shared cache, are used only if they match their fingerprint, and run on engines built into the signed desktop app, so a web page can never introduce code.
 - Desktop app for Windows and macOS: signed releases with automatic updates, starts with the computer, keeps running in the tray, and shows unread counts on the taskbar or Dock.
 - Platform services: an audit log of every permission decision, a durable event system, scheduled jobs and reminders, alerts in the app or by email and Telegram, and recorded acceptance of each version of the terms of use.
