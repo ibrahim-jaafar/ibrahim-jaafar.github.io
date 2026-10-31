@@ -118,7 +118,7 @@ A news-intelligence engine for the company's newsrooms.
 - Planned by studying a leading commercial tool (NewsWhip Spike) feature by feature. About 9,500 lines with 257 automated tests.
 - Tech: Django, PostgreSQL + pgvector, React, AI embeddings.
 
-### Insert Suggester (live)
+### Insert Suggester
 
 An AI tool for script writers, designed to read each block of a video script, work out what it's really about, and propose visual inserts (videos, images, articles, X and Telegram posts) through live search, guided by a bank of past scripts. Candidates are judged by looking at their actual video frames.
 
