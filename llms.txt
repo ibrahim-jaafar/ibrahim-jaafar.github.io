@@ -9,4 +9,5 @@ Main developer on the 3-person R&D team at Blue House Films, where he shipped 9 
 - [Full profile](https://ibrahim-jaafar.github.io/profile.md): every project with before/after results, skills, experience, education and certifications
 - [Portfolio website](https://ibrahim-jaafar.github.io/)
 - [Agency report demo](https://ibrahim-jaafar.github.io/agency-demo/): marketing report automation with data checks and a validated AI summary, running live on n8n
+- [Workshop slides: Running AI on your own computer](https://ibrahim-jaafar.github.io/training/running-ai-on-your-own-computer.pdf): a beginner workshop on local AI models, hardware, engines and quantization
 - [LinkedIn](https://www.linkedin.com/in/ibrahim-jaafar-007270121)

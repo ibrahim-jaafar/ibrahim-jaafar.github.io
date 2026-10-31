@@ -174,6 +174,16 @@ An online store with an admin panel. When an order comes in, the system shows ex
 - Storefront with shop and product pages, room collections, cart, customer accounts with delivery addresses and order history, and a blog.
 - Tech: Next.js, Supabase, Cloudflare.
 
+## Training
+
+I run regular AI workshops for developers. Here is one of them.
+
+### Running AI on your own computer (workshop, 36 slides, 2026)
+
+A beginner workshop on running open-source AI models locally: what hardware a model needs and how fast it will run, choosing between Ollama, llama.cpp and vLLM, what compression (quantization) does and how to read names like Q4_K_M, picking the right file on Hugging Face, checking licences, and running a first model.
+
+- Slides (PDF): https://ibrahim-jaafar.github.io/training/running-ai-on-your-own-computer.pdf
+
 ## Other projects
 
 ### AI, computer vision and media
