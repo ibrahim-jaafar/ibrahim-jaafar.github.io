@@ -18,7 +18,7 @@ Film and social media company, about 100 staff.
 - Co-developed a subtitle cleaner that cut a 30–90 minute manual editing task to seconds; in daily use across the company's news platforms.
 - Built company email inside the platform with phishing detection (SPF/DKIM/DMARC checks, lookalike domains, risky attachments) after the company faced phishing attacks.
 - Centralised company AI API keys behind a server-side broker with role-based access, so no employee or tool ever sees a key; marking someone as having left cuts their access to every tool at once.
-- Reviewed an intern's AI tool that suggests visual inserts for video scripts, found 82 problems and reworked large parts of it; now live.
+- Took over an intern's AI tool that finds visual inserts for video scripts, found 82 problems and reworked large parts of it. Now live, it does in 10–20 minutes the research that took writers hours, sometimes days.
 - Host and secure the platform (Oracle Cloud, Cloudflare R2 backups), backed by 1,200+ automated tests and 57 architecture decision records.
 - Review developers' code, supervise interns, train staff on each new tool and run AI workshops for the developers.
 

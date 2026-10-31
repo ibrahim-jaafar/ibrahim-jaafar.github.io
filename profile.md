@@ -124,7 +124,8 @@ An AI tool for script writers, designed to read each block of a video script, wo
 
 The version built by an intern didn't work reliably, so I reviewed its whole codebase, mapped its logic into a diagram and found 82 problems. I worked through them and reworked large parts of how it plans, searches and judges, each fix with tests: for example strict JSON schemas for every AI step, multilingual embeddings for the script bank, and dates that are never copied from another event. It is now live on the company platform.
 
-- **After:** I reviewed the intern's version, found 82 problems and reworked large parts of how it plans, searches and judges. It is now live on the company platform.
+- **Before:** for every script, writers worked out what each sentence was about, searched for sources and videos, then read or watched each one before adding it. It took hours, sometimes days.
+- **After:** the tool does this automatically in 10 to 20 minutes, depending on the size and complexity of the script.
 
 ## AI agents and automation
 
