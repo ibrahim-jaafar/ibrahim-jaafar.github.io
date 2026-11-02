@@ -19,7 +19,7 @@ Film and social media company, about 100 staff.
 - Built company email inside the platform with phishing detection (SPF/DKIM/DMARC checks, lookalike domains, risky attachments) after the company faced phishing attacks.
 - Centralised company AI API keys behind a server-side broker with role-based access, so no employee or tool ever sees a key; marking someone as having left cuts their access to every tool at once.
 - Took over an intern's AI tool that finds visual inserts for video scripts, found 82 problems and reworked large parts of it. It does in 10–20 minutes the research that took writers hours, sometimes days.
-- Host and secure the platform (Oracle Cloud, Cloudflare R2 backups), backed by 1,200+ automated tests and 57 architecture decision records.
+- Host and secure the platform on an Oracle Cloud VPS monitored through the admin panel, with immutable Cloudflare R2 backups (30-day lock), backed by 1,200+ automated tests and 57 architecture decision records.
 - Review developers' code, supervise interns, train staff on each new tool and run AI workshops for the developers.
 
 ### Freelance Software Developer | 2023 – present

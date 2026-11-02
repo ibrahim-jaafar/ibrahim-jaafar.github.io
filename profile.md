@@ -36,7 +36,7 @@ As the main developer on the 3-person R&D team, I own the platform end to end. I
 - **AI API keys:** employees used to buy their own keys. Now company keys are encrypted and managed in one place. Neither staff nor the tools ever see a key: a tool sends its request to the platform's broker, which checks the person's permission, adds the key on the server, makes the call and returns only the result.
 - Role-based access control: each employee sees only the data their role allows.
 - Plugin design, so each tool (HR, tasks, chat, mail) can be built and shipped on its own.
-- Self-hosted on an Oracle server, with backups to Cloudflare R2.
+- Self-hosted on an Oracle Cloud VPS that I monitor through the admin panel, with encrypted backups to Cloudflare R2 that are locked for 30 days so no one can change or delete them, not even an admin.
 - Developer documentation: architecture guide, plugin guide, runbook and architecture decision records, so other developers can build plugins on their own.
 - On-laptop AI: plugins can run AI models on employees' own laptops. Models download into a shared cache, are used only if they match their fingerprint, and run on engines built into the signed desktop app, so a web page can never introduce code.
 - Desktop app for Windows and macOS: signed releases with automatic updates, starts with the computer, keeps running in the tray, and shows unread counts on the taskbar or Dock.
