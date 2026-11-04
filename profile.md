@@ -105,7 +105,7 @@ Employees report bugs, security issues and feature requests from inside the plat
 - **After:** a dashboard collects the hardware specs of every staff computer, so the company can check before buying, and developers know what hardware to build for. It guided the decisions when the macOS version of the platform was developed.
 - **Plugin usage:** a second tab measures the real work done in each tool and its top users, so the company can see which tools people have actually adopted.
 
-### Newsroom engine (working MVP)
+### Newsroom engine
 
 A news-intelligence engine for the company's newsrooms.
 
@@ -115,7 +115,7 @@ A news-intelligence engine for the company's newsrooms.
 - Each outlet has a research profile covering ownership, funding and leaning. It starts with 54 outlets in Arabic, English and French.
 - A newsroom screen with movable dashboard panels, a search builder, leaderboards of which outlets break stories first, and exports to CSV, JSON and PDF.
 - Alerts and AI digests in the app or by email, Telegram and Slack. AI use has daily request and spending caps.
-- Planned by studying a leading commercial tool (NewsWhip Spike) feature by feature. About 9,500 lines with 257 automated tests.
+- Built in one week by studying a leading commercial tool (NewsWhip Spike) feature by feature, and it replaced the company's NewsWhip subscription. About 9,500 lines with 257 automated tests.
 - Tech: Django, PostgreSQL + pgvector, React, AI embeddings.
 
 ### Insert Suggester
