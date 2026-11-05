@@ -273,7 +273,7 @@ export function parseHash(hash) {
 export const hashFor = (client, period, back = 0) => `#client=${client}&period=${period}${back ? `&back=${back}` : ''}`;
 
 export function noticeText(kind, info = {}) {
-  if (kind === 'waking') return 'Waking up the demo server. It sleeps when nobody uses it, so this can take up to a minute…';
+  if (kind === 'waking') return 'Waking up the demo server. It sleeps when nobody uses it, so this can take up to 4 minutes…';
   if (kind === 'unavailable') return 'The demo server isn’t answering right now. Please try again later.' + (info.hasReport ? ' The last report is shown below.' : '');
   if (kind === 'joined') return 'Someone else’s run was already going, so you’re watching that one. Its test data was their choice.';
   if (kind === 'failed') return 'The run is taking much longer than usual, so the page stopped waiting. Please try again later.';
@@ -408,7 +408,7 @@ function dashBody(c, problems, pv, period, ai) {
 function aiBox(c, pv, entry, generate) {
   const box = h('div', { class: 'dbox ai' }, h('h4', {}, 'AI summary', h('small', { class: 'sim' }, pv.words.covers)));
   const s = entry?.state === 'done' && entry.body.value?.clients?.find(x => x.client === c.client);
-  if (entry?.state === 'loading') box.append(h('p', { class: 'hint', role: 'status' }, 'Writing the summary… If the demo server was asleep, this can take a minute.'));
+  if (entry?.state === 'loading') box.append(h('p', { class: 'hint', role: 'status' }, 'Writing the summary… If the demo server was asleep, this can take up to 4 minutes.'));
   else if (s) {
     const b = entry.body, at = b.current ? ` (as of ${b.asOf.slice(11, 16)} UTC)` : '';
     // (append takes elements one by one: no lists, and a null would show as the text "null")
