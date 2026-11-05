@@ -1,7 +1,11 @@
 # Ibrahim Jaafar
 
 AI Specialist · Automation, AI agents and internal platforms
-Beirut, Lebanon · Remote, available US business hours · {email} · ibrahim-jaafar.github.io · linkedin.com/in/ibrahim-jaafar-007270121
+**Email:** {email}
+**Location:** Beirut, Lebanon
+**Phone:** +961 81 860 454
+**Website:** ibrahim-jaafar.github.io
+**LinkedIn:** linkedin.com/in/ibrahim-jaafar-007270121
 
 ## Summary
 
@@ -48,6 +52,8 @@ Four Telegram bots coordinated by an orchestrator, used almost every day. The ca
 **Furniture CAD-to-render pipeline**
 Product images without a photo shoot: Claude builds each scene in Blender through MCP at real dimensions, and Gemini renders it photoreal. 32 reusable scene scripts.
 
+Check all projects at ibrahim-jaafar.github.io/#projects
+
 ## Skills
 
 - **AI:** Claude Code, MCP, Hermes Agent, OpenAI and Gemini APIs, structured outputs, RAG, embeddings, LangChain
@@ -67,4 +73,4 @@ Anthropic: Claude Code 101, Introduction to Agent Skills, Introduction to Subage
 
 ## Languages
 
-Arabic (native) · English (professional) · Persian (good)
+Arabic (native) · English (professional)

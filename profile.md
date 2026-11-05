@@ -364,4 +364,4 @@ Anthropic: Claude Code 101, Introduction to Agent Skills, Introduction to Subage
 
 ## Languages
 
-Arabic (native), English (professional), Persian (good)
+Arabic (native), English (professional)

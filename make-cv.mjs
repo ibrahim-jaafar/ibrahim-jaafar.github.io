@@ -14,6 +14,7 @@ const PDF = fileURLToPath(new URL('cv.pdf', import.meta.url));
 const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
   .replace('{email}', `<a href="mailto:${MAIL}">${MAIL}</a>`)
+  .replace(/\+961[\d ]+\d/, m => `<a href="tel:${m.replace(/ /g, '')}">${m}</a>`)
   .replace(/\b((?:ibrahim-jaafar\.github\.io|linkedin\.com\/in)[^\s·,]*)/g, '<a href="https://$1">$1</a>');
 
 // the few markdown shapes cv.md uses: # name, ## section, ### job | dates, - bullet, plain lines
@@ -26,6 +27,7 @@ for (const line of readFileSync(new URL('cv.md', import.meta.url), 'utf8').repla
   else if ((m = line.match(/^## (.*)/))) html += `<h2>${esc(m[1])}</h2>`;
   else if ((m = line.match(/^### (.*?)(?: \| (.*))?$/))) html += `<div class="job"><h3>${inline(m[1])}</h3><span>${esc(m[2] ?? '')}</span></div>`;
   else if (line.startsWith('- ')) { html += `${list ? '' : '<ul>'}<li>${inline(line.slice(2))}</li>`; list = true; }
+  else if (/^\*\*\w+:\*\* /.test(line)) html += `<p class="c">${inline(line)}</p>`; // contact lines: **Label:** value
   else html += `<p>${inline(line)}</p>`;
 }
 if (list) html += '</ul>';
@@ -37,7 +39,8 @@ body { font: 9.8pt/1.38 Arial, Helvetica, sans-serif; color: #111; margin: 0; }
 a { color: inherit; text-decoration: none; white-space: nowrap; }
 h1 { font-size: 20pt; margin: 0 0 2px; }
 h1 + p { font-size: 10.5pt; font-weight: bold; margin: 0 0 2px; }
-h1 + p + p { color: #333; margin: 0 0 4px; }
+p.c { color: #333; margin: 0; }
+p.c b { display: inline-block; width: 70px; color: #111; }
 h2 { font-size: 10.5pt; text-transform: uppercase; letter-spacing: 0.06em; border-bottom: 1px solid #111; padding-bottom: 1px; margin: 11px 0 5px; break-after: avoid; }
 h3 { font-size: 10pt; margin: 0; }
 .job { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; break-after: avoid; }
