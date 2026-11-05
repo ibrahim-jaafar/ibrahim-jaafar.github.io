@@ -25,7 +25,7 @@ I turn complex operational problems into reliable AI systems, including workflow
 
 Blue House Films is a film and social media company of about 100 people. I was hired to help the team work faster and more accurately with less repetitive work. I replaced scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks, and I've kept building more since. On a typical day 50–60 staff use the platform: about 55 use Chat, 50 the Task Manager and 15 the SRT Cleaner.
 
-As the main developer on the 3-person R&D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub and automated backups. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers. I discover what to build by sitting with each employee and having them walk me through their workflow, then analysing where their time and errors go.
+As the main developer on the 3-person R&D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub, automated backups and CI/CD on GitHub Actions: pull requests are tested, security-scanned and checked for leaked secrets, and backend changes deploy only after the tests pass. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers. I discover what to build by sitting with each employee and having them walk me through their workflow, then analysing where their time and errors go.
 
 ### Ecosystem: one platform for the whole company
 
@@ -144,6 +144,18 @@ A marketing report for two made-up agency clients, a skin clinic and a home-good
 - **AI on request, kept honest:** a summary of whatever period is on screen, written when asked; the server works out the figures itself. It never types a number; it writes placeholders, each next to its own label, and the code fills in the real values. Its answer must also follow a strict JSON schema. A broken answer is refused and a template summary is used instead.
 - **Live:** n8n workflows on a free server: one plays the customers of the last 7 days and saves them in a GoHighLevel sandbox; the report a real client would get reads them back, sends the conversions to Meta's Conversions API and posts an alert to Slack when a check fires or a run fails; another asks Gemini for a summary on request, and another sends test leads through GoHighLevel and Meta one at a time. The logic is covered by 204 automated tests.
 - Tech: n8n, GoHighLevel API, Meta Conversions API, Gemini (structured output), JavaScript, Supabase.
+
+### Word Fix: correct a misspoken word in a video (client work, in use)
+
+Built for a content creator. Before, one wrong word meant re-shooting and re-editing that part, which took hours, or adding an on-screen note about the mistake, which looked unprofessional. Now they click the wrong word in the transcript and type the right one. It's re-spoken in their own voice and room sound, in the same place in the video, and each fix takes seconds.
+
+- **Speech editing, not text-to-speech:** an AI model (F5-TTS) hears the audio on both sides of the word and re-speaks only that stretch, so the voice, pace and joins to the next words match.
+- **Cuts in the right place:** Whisper's word times are 0.2–0.5 s off, so a forced aligner finds where each word really starts and ends.
+- **Every take is checked:** a speech model listens to each new take and keeps one that has the new word and no trace of the old one, trying up to 3 times.
+- **Same room, same length:** the room's background noise is measured in nearby pauses and filled in under the new word, and the video never changes length, so it stays in sync.
+- **Editor:** the transcript follows the video. You can preview and retry, fixes run in the background one after another, a word can be fixed everywhere it's said, any fix can be undone, and subtitles can be burned in on export.
+- **Runs on the creator's own PC:** n8n in Docker and a local GPU voice server; only the transcription goes to the cloud. 48 automated tests on the audio engine, plus an end-to-end test.
+- Tech: n8n, F5-TTS, wav2vec2 forced alignment, Whisper, ffmpeg, Node.js, Python, Docker.
 
 ### Hermes multi-agent system on Telegram
 
@@ -342,7 +354,7 @@ A beginner workshop on Meta ads for healthcare: how patient data can reach Meta 
 - **AI and agents:** Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, OpenAI / Gemini / Groq / Mistral / OpenRouter APIs, structured JSON outputs, LangChain, RAG, embeddings
 - **Automation and integration:** REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n
 - **Apps and backend:** Python, TypeScript, React, Next.js, FastAPI, Django, Supabase, Postgres, SQLite, Electron, Tauri, Streamlit and Plotly dashboards
-- **Infrastructure:** Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub, role-based access control
+- **Infrastructure:** Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub Actions (CI/CD), role-based access control
 - **Vision and media:** YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, FFmpeg, ElevenLabs
 - **Engineering:** SolidWorks (certified), Blender, CNC and 3D printing, Arduino, Raspberry Pi
 - **Business systems:** Notion (built a full business hub for Ghandour Solutions), SolidWorks PDM (selected and installed after comparing ERP, PDM and PLM systems)

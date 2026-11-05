@@ -48,7 +48,8 @@ h3 { font-size: 10pt; margin: 0; }
 p { margin: 0 0 3px; }
 ul { margin: 2px 0 4px; padding-left: 15px; }
 li { margin-bottom: 2px; }
-</style></head><body>${html}</body></html>`;
+.qr { position: absolute; top: 0; right: 0; width: 24mm; display: block; }
+</style></head><body><a class="qr" href="https://ibrahim-jaafar.github.io/">${readFileSync(new URL('img/cv-qr.svg', import.meta.url), 'utf8')}</a>${html}</body></html>`;
 
 const dir = mkdtempSync(join(tmpdir(), 'cv-'));
 try {

@@ -354,7 +354,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   <span class="eyebrow">Featured · current role</span>
   <h3 class="featured-title">Blue House Films: the company platform</h3>
   <p class="sub">Blue House Films is a film and social media company of about 100 people. I joined in September 2026 as its AI Specialist, to help the team work faster and more accurately with less repetitive work. I started by replacing scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks, and I've kept building more since. On a typical day 50–60 staff use the platform: about 55 use Chat, 50 the Task Manager and 15 the SRT Cleaner.</p>
-  <p class="sub">As the main developer on the 3-person R&amp;D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub and automated backups. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers.</p>
+  <p class="sub">As the main developer on the 3-person R&amp;D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub, automated backups and CI/CD on GitHub Actions: pull requests are tested, security-scanned and checked for leaked secrets, and backend changes deploy only after the tests pass. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers.</p>
   <div class="tiles"></div>
 
   <div class="card">
@@ -517,6 +517,20 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
     </ul>
     <p><a class="btn primary" href="agency-demo/">Try the demo →</a></p>
     <div class="shots"><img src="img/agency-demo.webp" alt="Agency report demo: client dashboard, month view, with the period stepper, budget, funnel and campaigns" loading="lazy"><img src="img/agency-demo-2.webp" alt="Agency report demo: charts, the AI summary written by Gemini with code-filled numbers, and data health warnings" loading="lazy"><img src="img/agency-demo-workflow.webp" alt="The weekly-report workflow in the n8n editor: read each client from GoHighLevel with pause and retry when refused, read again while search is still catching up, save progress, send conversions to Meta, run the checks, build and save the report, send it to Slack" loading="lazy" style="grid-column:1/-1"></div>
+  </div>
+
+  <div class="card">
+    <h3>Word Fix: correct a misspoken word in a video (client work, in use)</h3>
+    <p class="meta">Client work · in use · n8n · F5-TTS · wav2vec2 forced alignment · Whisper · ffmpeg · Node.js · Python · Docker</p>
+    <p>Built for a content creator. Before, one wrong word meant re-shooting and re-editing that part, which took hours, or adding an on-screen note about the mistake, which looked unprofessional. Now they click the wrong word in the transcript and type the right one. It's re-spoken in their own voice and room sound, in the same place in the video, and each fix takes seconds.</p>
+    <ul>
+      <li><b>Speech editing, not text-to-speech:</b> an AI model (F5-TTS) hears the audio on both sides of the word and re-speaks only that stretch, so the voice, pace and joins to the next words match.</li>
+      <li><b>Cuts in the right place:</b> Whisper's word times are 0.2–0.5 s off, so a forced aligner finds where each word really starts and ends.</li>
+      <li><b>Every take is checked:</b> a speech model listens to each new take and keeps one that has the new word and no trace of the old one, trying up to 3 times.</li>
+      <li><b>Same room, same length:</b> the room's background noise is measured in nearby pauses and filled in under the new word, and the video never changes length, so it stays in sync.</li>
+      <li><b>Editor:</b> the transcript follows the video. You can preview and retry, fixes run in the background one after another, a word can be fixed everywhere it's said, any fix can be undone, and subtitles can be burned in on export.</li>
+      <li><b>Runs on the creator's own PC:</b> n8n in Docker and a local GPU voice server; only the transcription goes to the cloud. 48 automated tests on the audio engine, plus an end-to-end test.</li>
+    </ul>
   </div>
 
   <div class="card">
@@ -763,7 +777,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
     <div><b>AI and agents</b><p>Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, OpenAI / Gemini / Groq / Mistral / OpenRouter APIs, structured JSON outputs, LangChain, RAG, embeddings</p></div>
     <div><b>Automation and integration</b><p>REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n</p></div>
     <div><b>Apps and backend</b><p>Python, TypeScript, React, Next.js, FastAPI, Django, Supabase, Postgres, SQLite, Electron, Tauri, Streamlit and Plotly dashboards</p></div>
-    <div><b>Infrastructure</b><p>Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub, role-based access control</p></div>
+    <div><b>Infrastructure</b><p>Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub Actions (CI/CD), role-based access control</p></div>
     <div><b>Vision and media</b><p>YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, FFmpeg, ElevenLabs</p></div>
     <div><b>Engineering</b><p>SolidWorks (certified), Blender, CNC and 3D printing, Arduino, Raspberry Pi</p></div>
   </div>
@@ -777,7 +791,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
     <h3>AI Specialist</h3>
     <p class="org">Blue House Films</p>
     <p>A film and social media company of about 100 people. I was hired to help the team work faster and more accurately with less repetitive work. I started by replacing scattered tools and manual workflows with one connected internal platform, and shipped 9 tools to production in my first six weeks, and I've kept building more since.</p>
-    <p>As the main developer on the 3-person R&amp;D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub and automated backups. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers.</p>
+    <p>As the main developer on the 3-person R&amp;D team, I own the platform end to end. I design and build the tools, host and secure the server, and set up the company's GitHub, automated backups and CI/CD on GitHub Actions: pull requests are tested, security-scanned and checked for leaked secrets, and backend changes deploy only after the tests pass. I also review other developers' code, supervise the interns, train employees on each new tool, and run regular AI workshops for the developers.</p>
   </li>
   <li class="now">
     <span class="when">2023 – present</span>
