@@ -10,7 +10,7 @@ import { chart } from './charts.js';
 import { dayKey, addDays, daySeries, sumDays, periodRange, periodFigures } from './lib/daily.js';
 
 const API = 'https://agency-report-demo.onrender.com/webhook/demo';
-const FIRST_CALL_MS = 8000, WAKE_RETRY_MS = 5000, WAKE_MAX_MS = 120000, POLL_MS = 1500, RUN_MAX_MS = 180000;
+const FIRST_CALL_MS = 8000, WAKE_RETRY_MS = 5000, SLOW_WAKE_S = 360, POLL_MS = 1500, RUN_MAX_MS = 180000;
 
 export const PROBLEM_TEXT = {
   missing_source: ['Leads with no source', 'The CRM lost which ad brought them'],
@@ -745,8 +745,10 @@ export async function boot() {
   });
 
   // Wake the server and show the latest report. The Run button waits until it answers.
+  // No deadline: a slow cold start just keeps waiting, with the elapsed time shown.
+  const hint = h('p', { class: 'hint' }, 'The demo server sleeps when nobody uses it, so it can take up to 4 minutes to wake up.');
   $('#result').replaceChildren(h('div', { class: 'dash loading' }, h('div', { class: 'spinner', 'aria-hidden': 'true' }),
-    h('p', {}, 'Loading the latest report…'), h('p', { class: 'hint' }, 'The demo server sleeps when nobody uses it, so the first visit of the day can take up to a minute.')));
+    h('p', {}, 'Loading the latest report…'), hint));
   btn.disabled = true;
   btn.textContent = 'Connecting…';
   const t0 = Date.now();
@@ -761,12 +763,9 @@ export async function boot() {
       if (runWhenReady) { runWhenReady = false; btn.click(); }
       return;
     }
-    if (Date.now() - t0 > WAKE_MAX_MS) {
-      notice('unavailable', {});
-      btn.textContent = 'Demo unavailable';
-      $('#result').replaceChildren(h('div', { class: 'dash loading' }, h('p', {}, 'The demo server isn’t answering right now, so there is no report to show. Please try again later.')));
-      return;
-    }
+    const secs = Math.round((Date.now() - t0) / 1000), took = `${Math.floor(secs / 60)} min ${secs % 60} s`;
+    if (secs >= SLOW_WAKE_S) hint.textContent = `Starting the server is taking longer than expected (${took}). Try refreshing the page.`;
+    else if (secs >= 60) hint.textContent = `Still starting up (${took})… this usually takes about 4 minutes.`;
     notice('waking');
     await sleep(WAKE_RETRY_MS);
   }
