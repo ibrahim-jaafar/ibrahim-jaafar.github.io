@@ -145,7 +145,7 @@ A marketing report for two made-up agency clients, a skin clinic and a home-good
 - **Live:** n8n workflows on a free server: one plays the customers of the last 7 days and saves them in a GoHighLevel sandbox; the report a real client would get reads them back, sends the conversions to Meta's Conversions API and posts an alert to Slack when a check fires or a run fails; another asks Gemini for a summary on request, and another sends test leads through GoHighLevel and Meta one at a time. The logic is covered by 204 automated tests.
 - Tech: n8n, GoHighLevel API, Meta Conversions API, Gemini (structured output), JavaScript, Supabase.
 
-### Word Fix: correct a misspoken word in a video (client work, in use)
+### Word Fix: correct a misspoken word in a video
 
 Built for a content creator. Before, one wrong word meant re-shooting and re-editing that part, which took hours, or adding an on-screen note about the mistake, which looked unprofessional. Now they click the wrong word in the transcript and type the right one. It's re-spoken in their own voice and room sound, in the same place in the video, and each fix takes seconds.
 

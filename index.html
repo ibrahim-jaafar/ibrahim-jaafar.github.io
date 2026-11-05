@@ -76,7 +76,7 @@ h1{font-size:clamp(38px,6.5vw,64px);line-height:1.05;margin:0 0 12px;letter-spac
 .btn:hover{color:var(--text);background:var(--glass-hi);transform:translateY(-1px)}
 .btn.primary{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 30px rgba(92,120,255,.35)}
 /* one panel, four figures split by hairlines */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);margin-top:44px;border:1px solid var(--line);border-radius:18px;background:var(--glass);backdrop-filter:blur(10px);overflow:hidden}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:44px;border:1px solid var(--line);border-radius:18px;background:var(--glass);backdrop-filter:blur(10px);overflow:hidden}
 .stat{padding:24px 26px;position:relative}
 .stat + .stat{border-left:1px solid var(--line)}
 .stat b{display:block;font-family:"Space Grotesk",Inter,sans-serif;font-size:40px;line-height:1;font-weight:600;letter-spacing:-.03em;color:var(--text)}
@@ -223,7 +223,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   .stats{grid-template-columns:1fr 1fr}
   .stat + .stat{border-left:0}
   .stat:nth-child(even){border-left:1px solid var(--line)}
-  .stat:nth-child(n+3){border-top:1px solid var(--line)}
+  .stat:nth-child(n+3){border-top:1px solid var(--line);grid-column:1/-1}
   .stat b{font-size:32px}
   section{padding:32px 0}
   .card{padding:20px}
@@ -324,7 +324,6 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
     <div class="stat"><b>5<small>+ yrs</small></b><span>Engineering &amp; product experience</span></div>
     <div class="stat"><b>20<small>+</small></b><span>Projects built</span></div>
     <div class="stat"><b>10<small>+</small></b><span>Clients &amp; organisations served</span></div>
-    <div class="stat"><b>2022</b><span>Building with AI since</span></div>
   </div>
 </header>
 
@@ -520,8 +519,8 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   </div>
 
   <div class="card">
-    <h3>Word Fix: correct a misspoken word in a video (client work, in use)</h3>
-    <p class="meta">Client work · in use · n8n · F5-TTS · wav2vec2 forced alignment · Whisper · ffmpeg · Node.js · Python · Docker</p>
+    <h3>Word Fix: correct a misspoken word in a video</h3>
+    <p class="meta">n8n · F5-TTS · wav2vec2 forced alignment · Whisper · ffmpeg · Node.js · Python · Docker</p>
     <p>Built for a content creator. Before, one wrong word meant re-shooting and re-editing that part, which took hours, or adding an on-screen note about the mistake, which looked unprofessional. Now they click the wrong word in the transcript and type the right one. It's re-spoken in their own voice and room sound, in the same place in the video, and each fix takes seconds.</p>
     <ul>
       <li><b>Speech editing, not text-to-speech:</b> an AI model (F5-TTS) hears the audio on both sides of the word and re-speaks only that stretch, so the voice, pace and joins to the next words match.</li>
