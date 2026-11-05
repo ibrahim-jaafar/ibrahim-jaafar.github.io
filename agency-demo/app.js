@@ -297,8 +297,34 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function call(path, opts = {}, ms = FIRST_CALL_MS) {
   const r = await fetch(API + path, { ...opts, signal: AbortSignal.timeout(ms) });
+  if (r.ok) lastAnswer = Date.now();
   return { status: r.status, body: await r.json().catch(() => null) };
 }
+
+// What the page says while the server wakes up, by seconds waited.
+export function wakeText(secs) {
+  const took = `${Math.floor(secs / 60)} min ${secs % 60} s`;
+  if (secs >= SLOW_WAKE_S) return `Starting the server is taking longer than expected (${took}). Try refreshing the page.`;
+  if (secs >= 60) return `Still starting up (${took})… this usually takes about 4 minutes.`;
+  return noticeText('waking');
+}
+
+// The server sleeps after 15 minutes with no visitors, even with this tab open (the live refresh never calls it),
+// so every button wakes it first. /status only reads, so checking it again and again is safe; the button's
+// own request then goes once, never retried (a retry could start a second run).
+// ponytail: skipped when the server answered in the last 10 minutes, to save a call per click
+let lastAnswer = 0;
+async function awake(onWait, always = false) {
+  if (!always && Date.now() - lastAnswer < 600000) return null;
+  const t0 = Date.now();
+  for (;;) {
+    const r = await call('/status').catch(() => null);
+    if (r?.status === 200) return r;
+    onWait(Math.round((Date.now() - t0) / 1000));
+    await sleep(WAKE_RETRY_MS);
+  }
+}
+const wakeStage = secs => setStage({ cls: 'running', text: wakeText(secs) });
 
 // The toolbar's status line shows either the run's stage or a notice (waking, limit, error).
 function setStage({ cls, text }) {
@@ -492,7 +518,7 @@ function dashboard(report, problems) {
     const k = viewKey(), ask = { period: state.period, back: state.back, dayVs: state.dayVs, broken };
     summaries.set(k, { state: 'loading' });
     draw();
-    call('/summary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(ask) }, 120000)
+    awake(() => {}).then(() => call('/summary', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(ask) }, 120000))
       .then(r => summaries.set(k, r.status === 200 && r.body?.value ? { state: 'done', body: r.body }
         : { state: 'error', text: r.body?.error ?? 'The summary couldn’t be written right now. Please try again in a minute.' }))
       .catch(() => summaries.set(k, { state: 'error', text: 'The demo server didn’t answer. Please try again in a minute.' }))
@@ -702,7 +728,8 @@ export async function boot() {
     btn.textContent = 'Running…';
     try {
       const body = JSON.stringify(scenario());
-      // the server is already awake (the page woke it on load), so one call with a long timeout, never a retry that could start a second run
+      await awake(wakeStage);
+      // one call with a long timeout, never a retry that could start a second run
       const r = await call('/start', { method: 'POST', headers: { 'content-type': 'application/json' }, body }, 60000);
       if (r.status === 429) {
         notice('limit', r.body ?? {});
@@ -727,6 +754,7 @@ export async function boot() {
   const lead = $('#lead');
   lead.addEventListener('click', async () => {
     lead.disabled = true;
+    await awake(wakeStage);
     setStage({ cls: 'running', text: 'Sending a test lead through GoHighLevel and Meta…' });
     try {
       const r = await call('/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ client: parseHash(location.hash).client ?? 'clinic' }) }, 60000);
@@ -751,24 +779,13 @@ export async function boot() {
     h('p', {}, 'Loading the latest report…'), hint));
   btn.disabled = true;
   btn.textContent = 'Connecting…';
-  const t0 = Date.now();
-  for (;;) {
-    const r = await call('/status').catch(() => null);
-    if (r?.status === 200) {
-      showStage(r.body?.steps ?? [], r.body?.report ? r.body.status : null, r.body?.report);
-      if (r.body?.report) render(r.body.report);
-      else $('#result').replaceChildren(h('div', { class: 'dash loading' }, h('p', {}, 'No report yet. Press Run the report to make the first one.')));
-      btn.disabled = false;
-      btn.textContent = 'Run the report';
-      if (runWhenReady) { runWhenReady = false; btn.click(); }
-      return;
-    }
-    const secs = Math.round((Date.now() - t0) / 1000), took = `${Math.floor(secs / 60)} min ${secs % 60} s`;
-    if (secs >= SLOW_WAKE_S) hint.textContent = `Starting the server is taking longer than expected (${took}). Try refreshing the page.`;
-    else if (secs >= 60) hint.textContent = `Still starting up (${took})… this usually takes about 4 minutes.`;
-    notice('waking');
-    await sleep(WAKE_RETRY_MS);
-  }
+  const r = await awake(secs => { notice('waking'); if (secs >= 60) hint.textContent = wakeText(secs); }, true);
+  showStage(r.body?.steps ?? [], r.body?.report ? r.body.status : null, r.body?.report);
+  if (r.body?.report) render(r.body.report);
+  else $('#result').replaceChildren(h('div', { class: 'dash loading' }, h('p', {}, 'No report yet. Press Run the report to make the first one.')));
+  btn.disabled = false;
+  btn.textContent = 'Run the report';
+  if (runWhenReady) { runWhenReady = false; btn.click(); }
 }
 
 if (typeof document !== 'undefined') boot();

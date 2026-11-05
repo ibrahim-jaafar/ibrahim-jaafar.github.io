@@ -1,7 +1,7 @@
 // node --test agency-demo/app.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fmt, noticeText } from './app.js';
+import { fmt, noticeText, wakeText } from './app.js';
 
 test('null and zero-division values render as a dash', () => {
   assert.equal(fmt(null, 'usd'), '—');
@@ -482,4 +482,10 @@ test('the toolbar says what happened to a test lead', async () => {
   assert.equal(testLeadText({ name: 'Dana H.', client: 'clinic', source: 'organic', outcome: 'open', value: 0, deal: null, meta: null }),
     '✓ Test lead: Dana H. enquired (not from an ad) · saved in GoHighLevel');
   assert.match(testLeadText({ name: 'R F.', client: 'clinic', source: null, outcome: 'converted', value: 150, deal: false, meta: false }), /no source recorded.*deal wasn’t saved.*Meta didn’t take it/);
+});
+
+test('wakeText: waking, then the time waited, then a refresh hint after 6 minutes', () => {
+  assert.equal(wakeText(10), noticeText('waking'));
+  assert.equal(wakeText(80), 'Still starting up (1 min 20 s)… this usually takes about 4 minutes.');
+  assert.match(wakeText(360), /taking longer than expected \(6 min 0 s\)\. Try refreshing the page\./);
 });
