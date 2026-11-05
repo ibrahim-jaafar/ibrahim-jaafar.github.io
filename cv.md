@@ -40,7 +40,7 @@ Solar battery systems, industrial machines and custom CNC-made parts.
 ## Selected projects
 
 **Agency report automation** · live demo: ibrahim-jaafar.github.io/agency-demo
-n8n workflows save leads to GoHighLevel, send conversions to Meta's Conversions API, run data checks in code and alert Slack when something looks wrong. A client dashboard covers any day, week, month or year. The AI summary writes placeholders that code fills in, so it can never invent a figure. 203 automated tests.
+n8n workflows save leads to GoHighLevel, send conversions to Meta's Conversions API, run data checks in code and alert Slack when something looks wrong. A client dashboard covers any day, week, month or year. The AI summary writes placeholders that code fills in, so it can never invent a figure. 204 automated tests.
 
 **Hermes multi-agent system**
 Four Telegram bots coordinated by an orchestrator, used almost every day. The car bot runs end to end from a licence plate: scraping, VIN recall checks, then an Android emulator to pull the car's history.
