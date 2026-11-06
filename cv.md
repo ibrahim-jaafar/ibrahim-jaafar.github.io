@@ -24,7 +24,7 @@ Film and social media company, about 100 staff.
 - Centralised company AI API keys behind a server-side broker with role-based access, so no employee or tool ever sees a key; marking someone as having left cuts their access to every tool at once.
 - Took over an intern's AI tool that finds visual inserts for video scripts, found 82 problems and reworked large parts of it. It does in 10–20 minutes the research that took writers hours, sometimes days.
 - Built a news-intelligence engine in one week that tracks 54 outlets in three languages and replaced the company's NewsWhip subscription.
-- Host and secure the platform on an Oracle Cloud VPS monitored through the admin panel, with immutable Cloudflare R2 backups (30-day lock), backed by 1,200+ automated tests and 57 architecture decision records. Set up CI/CD on GitHub Actions: pull requests are tested, security-scanned and checked for leaked secrets, and backend changes deploy only after the tests pass.
+- Host and secure the platform on an Oracle Cloud VPS monitored through the admin panel, with immutable Cloudflare R2 backups (30-day lock), backed by 1,400+ automated tests and 60 architecture decision records. Set up CI/CD on GitHub Actions: pull requests are tested, security-scanned and checked for leaked secrets, and backend changes deploy only after the tests pass.
 - Review developers' code, supervise interns, train staff on each new tool and run AI workshops for the developers.
 
 ### Freelance Software Developer | 2023 – present
@@ -61,10 +61,10 @@ Check all projects at ibrahim-jaafar.github.io/#projects
 ## Skills
 
 - **AI:** Claude Code, MCP, Hermes Agent, Anthropic, OpenAI, Gemini, OpenRouter and Replicate APIs, structured outputs, RAG, embeddings, LangChain
-- **Automation:** n8n, REST APIs, webhooks, web scraping, GoHighLevel API, Meta Conversions API
+- **Automation:** n8n, REST APIs, webhooks, web scraping, GoHighLevel API, Meta Conversions API, Slack API, Google Docs API and service accounts
 - **Development:** Python, TypeScript, React, Next.js, Django, FastAPI, PostgreSQL, Supabase, Tauri
 - **Infrastructure:** Oracle Cloud, Cloudflare R2, Docker, GitHub Actions (CI/CD), role-based access control
-- **Computer vision:** YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper
+- **Computer vision and speech:** YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, F5-TTS
 - **Engineering:** SolidWorks (certified), Blender, CNC machining, Arduino
 
 ## Education

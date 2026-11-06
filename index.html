@@ -75,7 +75,7 @@ h1{font-size:clamp(38px,6.5vw,64px);line-height:1.05;margin:0 0 12px;letter-spac
 .btn{display:inline-block;padding:11px 20px;border-radius:12px;border:1px solid var(--line);font-weight:600;color:var(--text);background:var(--glass);transition:.2s}
 .btn:hover{color:var(--text);background:var(--glass-hi);transform:translateY(-1px)}
 .btn.primary{background:var(--grad);border:0;color:#fff;box-shadow:0 8px 30px rgba(92,120,255,.35)}
-/* one panel, four figures split by hairlines */
+/* one panel, three figures split by hairlines */
 .stats{display:grid;grid-template-columns:repeat(3,1fr);margin-top:44px;border:1px solid var(--line);border-radius:18px;background:var(--glass);backdrop-filter:blur(10px);overflow:hidden}
 .stat{padding:24px 26px;position:relative}
 .stat + .stat{border-left:1px solid var(--line)}
@@ -259,6 +259,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   "AI agents",
   "Multi-agent systems",
   "Workflow automation",
+  "n8n",
   "Claude Code",
   "MCP",
   "Hermes Agent",
@@ -307,7 +308,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
 
 <header class="wrap" id="top">
   <div class="intro">
-    <img class="avatar" src="img/photo.jpg" alt="Ibrahim Jaafar" width="168" height="168">
+    <img class="avatar" src="img/photo.jpg" alt="Ibrahim Jaafar" width="176" height="176">
     <div>
       <h1>Ibrahim Jaafar</h1>
       <p class="role">AI Specialist · Automation, AI agents and business systems</p>
@@ -363,6 +364,9 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
       <div class="after"><span class="label">After</span>One connected platform and one source of truth. Every tool plugs into it as a plugin, and everything can be tracked.</div>
     </div>
     <ul>
+      <li><b>Onboarding:</b> a new hire used to collect colleagues' contacts one by one, then download, set up and create an account for each tool. Now they get one account, with colleagues already in chat, company email ready, and the tools their role needs already available.</li>
+      <li><b>Offboarding:</b> people who left used to keep access to everything. Now, when HR marks someone as terminated, their sign-in is disabled, every session on every device is ended, and the action is logged in the security log.</li>
+      <li><b>AI API keys:</b> employees used to buy their own keys. Now company keys are encrypted and managed in one place. Neither staff nor the tools ever see a key: a tool sends its request to the platform's broker, which checks the person's permission, adds the key on the server, makes the call and returns only the result.</li>
       <li>Role-based access control: each employee sees only the data their role allows.</li>
       <li>Plugin design, so each tool (HR, tasks, chat, mail) can be built and shipped on its own.</li>
       <li>Self-hosted on an Oracle Cloud VPS that I monitor through the admin panel, with encrypted backups to Cloudflare R2 that are locked for 30 days so no one can change or delete them, not even an admin.</li>
@@ -370,7 +374,7 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
       <li><b>On-laptop AI:</b> plugins can run AI models on employees' own laptops. Models download into a shared cache and are used only if they match their fingerprint, and the engines that run them are built into the signed desktop app, so a web page can never introduce code.</li>
       <li><b>Desktop app:</b> signed releases with automatic updates, starts with the computer, keeps running in the tray, and shows unread counts on the taskbar or Dock. Windows and macOS.</li>
       <li><b>Platform services:</b> an audit log of every permission decision, a durable event system, scheduled jobs and reminders, alerts in the app or by email and Telegram, and recorded acceptance of each version of the terms of use.</li>
-      <li><b>Scale:</b> about 70,000 lines of code, 1,200+ automated tests and 57 architecture decision records. I made 92% of the commits.</li>
+      <li><b>Scale:</b> about 70,000 lines of code, 1,400+ automated tests and 60 architecture decision records. I made 92% of the commits.</li>
     </ul>
     <div class="tags"><span>Django</span><span>PostgreSQL</span><span>Django-Q2 jobs</span><span>React + Vite</span><span>Tauri desktop app</span><span>RBAC + audit log</span></div>
     <div class="shots"><img src="img/bh-apps.webp" alt="Blue House Ecosystem apps screen" loading="lazy"></div>
@@ -774,11 +778,12 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
   <h2>Tools I work with</h2>
   <div class="skills" style="margin-top:24px">
     <div><b>AI and agents</b><p>Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, Anthropic / OpenAI / Gemini / OpenRouter / Replicate / Groq / Mistral APIs, structured JSON outputs, LangChain, RAG, embeddings</p></div>
-    <div><b>Automation and integration</b><p>REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n</p></div>
+    <div><b>Automation and integration</b><p>REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n, GoHighLevel API, Meta Conversions API, Slack API, Google Docs API and service accounts</p></div>
     <div><b>Apps and backend</b><p>Python, TypeScript, React, Next.js, FastAPI, Django, Supabase, Postgres, SQLite, Electron, Tauri, Streamlit and Plotly dashboards</p></div>
     <div><b>Infrastructure</b><p>Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub Actions (CI/CD), role-based access control</p></div>
-    <div><b>Vision and media</b><p>YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, FFmpeg, ElevenLabs</p></div>
+    <div><b>Vision and media</b><p>YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, F5-TTS speech editing, FFmpeg, ElevenLabs</p></div>
     <div><b>Engineering</b><p>SolidWorks (certified), Blender, CNC and 3D printing, Arduino, Raspberry Pi</p></div>
+    <div><b>Business systems</b><p>Notion (built a full business hub for Ghandour Solutions), SolidWorks PDM (selected and installed after comparing ERP, PDM and PLM systems)</p></div>
   </div>
 </div></section>
 

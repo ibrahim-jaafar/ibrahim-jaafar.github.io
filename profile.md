@@ -41,7 +41,7 @@ As the main developer on the 3-person R&D team, I own the platform end to end. I
 - On-laptop AI: plugins can run AI models on employees' own laptops. Models download into a shared cache, are used only if they match their fingerprint, and run on engines built into the signed desktop app, so a web page can never introduce code.
 - Desktop app for Windows and macOS: signed releases with automatic updates, starts with the computer, keeps running in the tray, and shows unread counts on the taskbar or Dock.
 - Platform services: an audit log of every permission decision, a durable event system, scheduled jobs and reminders, alerts in the app or by email and Telegram, and recorded acceptance of each version of the terms of use.
-- Scale: about 70,000 lines of code, 1,200+ automated tests and 57 architecture decision records. I made 92% of the commits.
+- Scale: about 70,000 lines of code, 1,400+ automated tests and 60 architecture decision records. I made 92% of the commits.
 - Tech: Django, PostgreSQL, Django-Q2 jobs, React + Vite, Tauri desktop app, RBAC + audit log.
 
 ### Task Manager
@@ -352,10 +352,10 @@ A beginner workshop on Meta ads for healthcare: how patient data can reach Meta 
 ## Skills
 
 - **AI and agents:** Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, Anthropic / OpenAI / Gemini / OpenRouter / Replicate / Groq / Mistral APIs, structured JSON outputs, LangChain, RAG, embeddings
-- **Automation and integration:** REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n
+- **Automation and integration:** REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n, GoHighLevel API, Meta Conversions API, Slack API, Google Docs API and service accounts
 - **Apps and backend:** Python, TypeScript, React, Next.js, FastAPI, Django, Supabase, Postgres, SQLite, Electron, Tauri, Streamlit and Plotly dashboards
 - **Infrastructure:** Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub Actions (CI/CD), role-based access control
-- **Vision and media:** YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, FFmpeg, ElevenLabs
+- **Vision and media:** YOLO, OpenCV, TensorRT, CLIP / SigLIP, Whisper, F5-TTS speech editing, FFmpeg, ElevenLabs
 - **Engineering:** SolidWorks (certified), Blender, CNC and 3D printing, Arduino, Raspberry Pi
 - **Business systems:** Notion (built a full business hub for Ghandour Solutions), SolidWorks PDM (selected and installed after comparing ERP, PDM and PLM systems)
 - **How I work:** workflow discovery with each user, researching the best solution for each problem, planning with KPIs, limits and cost options before building, product requirements and architecture decision records, automated testing, code review, user training and AI workshops
