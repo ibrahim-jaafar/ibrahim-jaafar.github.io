@@ -351,7 +351,7 @@ A beginner workshop on Meta ads for healthcare: how patient data can reach Meta 
 
 ## Skills
 
-- **AI and agents:** Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, OpenAI / Gemini / Groq / Mistral / OpenRouter APIs, structured JSON outputs, LangChain, RAG, embeddings
+- **AI and agents:** Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, Anthropic / OpenAI / Gemini / OpenRouter / Replicate / Groq / Mistral APIs, structured JSON outputs, LangChain, RAG, embeddings
 - **Automation and integration:** REST APIs, webhooks, web scraping, Telegram bots, Android emulator automation, n8n
 - **Apps and backend:** Python, TypeScript, React, Next.js, FastAPI, Django, Supabase, Postgres, SQLite, Electron, Tauri, Streamlit and Plotly dashboards
 - **Infrastructure:** Oracle Cloud, Cloudflare R2, Vercel, Docker, GitHub Actions (CI/CD), role-based access control
