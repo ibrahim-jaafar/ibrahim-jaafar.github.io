@@ -13,4 +13,5 @@ Main developer on the 3-person R&D team at Blue House Films, where he shipped 9 
 - [Workshop slides: Keeping your data private with AI](https://ibrahim-jaafar.github.io/training/keeping-your-data-private-with-ai.pdf): a beginner workshop on AI privacy options, Zero Data Retention and provider safeguards
 - [Workshop slides: HIPAA and AI: a beginner's guide](https://ibrahim-jaafar.github.io/training/hipaa-and-ai-a-beginners-guide.pdf): a beginner workshop on patient data (PHI), BAAs with AI providers and building with AI safely
 - [Workshop slides: Meta ads and HIPAA](https://ibrahim-jaafar.github.io/training/meta-ads-and-hipaa.pdf): a beginner workshop on how healthcare ads can leak patient data to Meta and how to advertise safely
+- [Workshop slides: From discovery to production](https://ibrahim-jaafar.github.io/training/from-discovery-to-production.pdf): a hands-on workshop on building and shipping custom AI solutions for clients, from use-case discovery to deployment and pricing
 - [LinkedIn](https://www.linkedin.com/in/ibrahim-jaafar-007270121)

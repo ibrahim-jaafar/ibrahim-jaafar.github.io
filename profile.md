@@ -349,6 +349,12 @@ A beginner workshop on Meta ads for healthcare: how patient data can reach Meta 
 
 - Slides (PDF): https://ibrahim-jaafar.github.io/training/meta-ads-and-hipaa.pdf
 
+### From discovery to production (workshop, 44 slides)
+
+A hands-on workshop on building and shipping custom AI solutions for clients: finding the real problem and picking the right use case, scoping a proof of concept or MVP and selling it in two-week sprints, building on one standard stack with tests and LLM evals, deploying, securing and monitoring it, and pricing for long-term partnerships. Six exercises with example answers.
+
+- Slides (PDF): https://ibrahim-jaafar.github.io/training/from-discovery-to-production.pdf
+
 ## Skills
 
 - **AI / LLM engineering and agents:** Claude, Claude Code, OpenAI Codex, Hermes Agent, MCP, LLM APIs (Anthropic, OpenAI, Gemini, OpenRouter, Replicate, Groq, Mistral), structured JSON outputs, LangChain, RAG, embeddings, Microsoft Foundry, generative AI evaluation
