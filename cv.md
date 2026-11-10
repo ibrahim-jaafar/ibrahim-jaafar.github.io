@@ -60,7 +60,7 @@ Check all projects at ibrahim-jaafar.github.io/#projects
 
 ## Skills
 
-- **AI / LLM engineering:** Claude Code, MCP, Hermes Agent, LLM APIs (Anthropic, OpenAI, Gemini, OpenRouter, Replicate), prompt engineering, structured outputs, RAG, embeddings, LangChain, Microsoft Foundry, generative AI evaluation
+- **AI / LLM engineering:** Claude Code, MCP, Hermes Agent, LLM APIs (Anthropic, OpenAI GPT, Gemini, OpenRouter, Replicate), prompt engineering, structured outputs, RAG, embeddings, LangChain, Hugging Face Transformers, Microsoft Foundry, generative AI evaluation
 - **Automation:** n8n, REST APIs, webhooks, web scraping, GoHighLevel API, Meta Conversions API, Slack API, Google Docs API and service accounts
 - **Development:** Python, TypeScript, React, Next.js, Django, FastAPI, PostgreSQL, Supabase, Tauri
 - **Infrastructure:** Oracle Cloud, Cloudflare R2, Docker, GitHub Actions (CI/CD), role-based access control
