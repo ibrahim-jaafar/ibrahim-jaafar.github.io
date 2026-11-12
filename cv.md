@@ -22,7 +22,7 @@ Film and social media company, about 100 staff.
 - Co-developed a subtitle cleaner that cut a 30–90 minute manual editing task to seconds; in daily use across the company's news platforms.
 - Built company email inside the platform with phishing detection (SPF/DKIM/DMARC checks, lookalike domains, risky attachments) after the company faced phishing attacks.
 - Centralised company AI API keys behind a server-side broker with role-based access, so no employee or tool ever sees a key; marking someone as having left cuts their access to every tool at once.
-- Took over an intern's AI tool that finds visual inserts for video scripts, found 82 problems and reworked large parts of it. It does in 10–20 minutes the research that took writers hours, sometimes days.
+- Main developer of an automated multi-step AI pipeline that finds visual inserts for video scripts, with separate AI judges and editor ratings to evaluate them. It does in under 15 minutes the research that took writers hours, sometimes days.
 - Built a news-intelligence engine in one week that tracks 54 outlets in three languages and replaced the company's NewsWhip subscription.
 - Host and secure the platform on an Oracle Cloud VPS monitored through the admin panel, with immutable Cloudflare R2 backups (30-day lock), backed by 1,400+ automated tests and 60 architecture decision records. Set up CI/CD on GitHub Actions: pull requests are tested, security-scanned and checked for leaked secrets, and backend changes deploy only after the tests pass.
 - Review developers' code, supervise interns, train staff on each new tool and run AI workshops for the developers.

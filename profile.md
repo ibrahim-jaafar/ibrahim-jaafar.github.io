@@ -122,10 +122,10 @@ A news-intelligence engine for the company's newsrooms.
 
 An AI tool for script writers, designed to read each block of a video script, work out what it's really about, and propose visual inserts (videos, images, articles, X and Telegram posts) through live search, guided by a bank of past scripts. Candidates are judged by looking at their actual video frames. When the editor is done, the tool writes the chosen inserts straight into the script's Google Doc. It uses the Google Docs API through a company Google service account (a robot account the doc is shared with), and the platform keeps that account's key, so the tool itself never holds it. The export adds a two-column table at the end of the doc in one batch: each part of the script, highlighted, next to its chosen links and the editor's notes.
 
-The version built by an intern didn't work reliably, so I reviewed its whole codebase, mapped its logic into a diagram and found 82 problems. I worked through them and reworked large parts of how it plans, searches and judges, each fix with tests: for example strict JSON schemas for every AI step, multilingual embeddings for the script bank, and dates that are never copied from another event.
+It runs as an automated multi-step AI pipeline: one step plans what each block needs, live search gathers candidates, and separate AI judges score the videos, posts, headlines and documents. Every AI step has a strict JSON schema, so a bad output is caught by code and never passed on. Editors rate the results in a Reviews tab, and each rating is tied to the AI judge that scored that item, so the judges can be evaluated against real use and improved. Other safeguards include multilingual embeddings for the script bank and dates that are never copied from another event.
 
 - **Before:** for every script, writers worked out what each sentence was about, searched for sources and videos, then read or watched each one before adding it. It took hours, sometimes days.
-- **After:** the tool does this automatically in 10 to 20 minutes, depending on the size and complexity of the script.
+- **After:** the tool does this automatically in under 15 minutes, depending on the size and complexity of the script.
 
 ## AI agents and automation
 
