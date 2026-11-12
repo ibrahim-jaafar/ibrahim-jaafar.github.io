@@ -42,7 +42,7 @@ As the main developer on the 3-person R&D team, I own the platform end to end. I
 - On-laptop AI: plugins can run AI models on employees' own laptops. Models download into a shared cache, are used only if they match their fingerprint, and run on engines built into the signed desktop app, so a web page can never introduce code.
 - Desktop app for Windows and macOS: signed releases with automatic updates; new versions go to chosen roles first and can be halted at once. It starts with the computer, keeps running in the tray, and shows unread counts on the taskbar or Dock.
 - Platform services: an audit log of every permission decision, a durable event system, scheduled jobs and reminders, alerts in the app or by email and Telegram, and recorded acceptance of each version of the terms of use.
-- Scale: about 70,000 lines of code, 1,400+ automated tests and 60 architecture decision records. I made 92% of the commits.
+- Scale: about 70,000 lines of code, 1,400+ automated tests and 60 architecture decision records.
 - Tech: Django, PostgreSQL, Django-Q2 jobs, React + Vite, Tauri desktop app, RBAC + audit log.
 
 ### Task Manager

@@ -16,11 +16,11 @@ AI specialist who builds AI systems and internal tools that teams use every day.
 ### AI Specialist, Blue House Films | Sep 2026 – present, remote
 Film and social media company, about 100 staff.
 
-- Built the company's internal platform as main developer on a 3-person R&D team; shipped 9 tools to production in the first six weeks, now used daily by 50–60 staff.
+- Built the company's secure internal platform as main developer on a 3-person R&D team: access checked on every request, two-factor sign-in, a key broker for 11 AI and web services, and self-monitoring with alerts. Shipped 9 tools in the first six weeks, now used daily by 50–60 staff.
 - Replaced Slack, WhatsApp and email for internal work with an in-house chat (about 55 daily users), removing paid Slack seats.
 - Built a task manager (about 50 daily users) that gives every task an owner, status and deadline, so managers see progress live instead of chasing updates.
 - Co-developed a subtitle cleaner that cut a 30–90 minute manual editing task to seconds; in daily use across the company's news platforms.
-- Built company email inside the platform with phishing detection (SPF/DKIM/DMARC checks, lookalike domains, risky attachments) after the company faced phishing attacks.
+- Built company email inside the platform with phishing warnings (fake colleagues, lookalike domains, risky attachments, misleading links) and a signed stamp proving mail came from the platform.
 - Centralised company AI API keys behind a server-side broker with role-based access, so no employee or tool ever sees a key; marking someone as having left cuts their access to every tool at once.
 - Main developer of an automated multi-step AI pipeline that finds visual inserts for video scripts, with separate AI judges and editor ratings to evaluate them. It does in under 15 minutes the research that took writers hours, sometimes days.
 - Built a news-intelligence engine in one week that tracks 54 outlets in three languages and replaced the company's NewsWhip subscription.
