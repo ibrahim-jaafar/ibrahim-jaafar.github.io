@@ -21,6 +21,7 @@ Film and social media company, about 100 staff.
 - Built a task manager (about 50 daily users) that gives every task an owner, status and deadline, so managers see progress live instead of chasing updates.
 - Co-developed a subtitle cleaner that cut a 30–90 minute manual editing task to seconds; in daily use across the company's news platforms.
 - Built company email inside the platform with phishing warnings (fake colleagues, lookalike domains, risky attachments, misleading links) and a signed stamp proving mail came from the platform.
+- Also built the platform's HR records (setting a role sets the person's tool access), a ticket system for bugs and feature requests, and a device dashboard that checks staff hardware before software purchases and tracks which tools people actually use.
 - Centralised company AI API keys behind a server-side broker with role-based access, so no employee or tool ever sees a key; marking someone as having left cuts their access to every tool at once.
 - Main developer of an automated multi-step AI pipeline that finds visual inserts for video scripts, with separate AI judges and editor ratings to evaluate them. It does in under 15 minutes the research that took writers hours, sometimes days.
 - Built a news-intelligence engine in one week that tracks 54 outlets in three languages and replaced the company's NewsWhip subscription.
@@ -55,6 +56,8 @@ Four Telegram bots coordinated by an orchestrator, used almost every day. The ca
 
 **Furniture CAD-to-render pipeline**
 Product images without a photo shoot: Claude builds each scene in Blender through MCP at real dimensions, and Gemini renders it photoreal. 32 reusable scene scripts.
+
+**Also built:** Mosaic, an order-to-production system for my furniture business (Next.js, Supabase, in development) · a Polymarket trader analyser and strategy simulator · ProMapper, a visual project planner still used by a business advisor · SecuSearch, a private multi-engine search app · a 3D vehicle viewer for an EV app (Three.js) · requirements, architecture and codebase setup for Optiforge, a CAD/CAE optimisation platform · a multimodal PDF RAG study · an Arabic ID number reader prototype · home automation with Arduino and Raspberry Pi.
 
 Check all projects at ibrahim-jaafar.github.io/#projects
 
