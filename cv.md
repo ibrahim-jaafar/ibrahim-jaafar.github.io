@@ -9,7 +9,7 @@ AI Specialist · Automation, AI agents and internal platforms
 
 ## Summary
 
-AI specialist who builds AI systems and internal tools that teams use every day. Main developer of a company-wide platform used daily by 50–60 staff, with 9 tools shipped to production in six weeks. Brings 5+ years of engineering and manufacturing experience, and also delivers AI tools for freelance clients across speech editing, image generation and computer vision.
+AI specialist who builds LLM systems, automations and internal platforms that teams use every day (Python, Django, React, LLM APIs, n8n). Main developer of a company-wide platform used daily by 50–60 staff, with 9 tools shipped to production in six weeks. Brings 5+ years of engineering and manufacturing experience, and also delivers AI tools for freelance clients across speech editing, image generation and computer vision.
 
 ## Experience
 
