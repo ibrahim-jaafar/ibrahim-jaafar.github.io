@@ -379,7 +379,7 @@ Bachelor's in Mechanical Engineering, almost completed: one module and the final
 
 ## Certifications
 
-Anthropic: Claude Code 101, Introduction to Agent Skills, Introduction to Subagents, Introduction to Model Context Protocol · Certified SOLIDWORKS Design Professional · Certified SOLIDWORKS Additive Manufacturing Associate · PMI: Fundamentals of Predictive Project Management · LinkedIn Learning: Engineering Drawings for Manufacturing, SOLIDWORKS: Advanced Engineering Drawings · HP LIFE: Customer Relationship Management
+Google AI Professional Certificate · Anthropic: Claude Code 101, Introduction to Agent Skills, Introduction to Subagents, Introduction to Model Context Protocol · Certified SOLIDWORKS Design Professional · Certified SOLIDWORKS Additive Manufacturing Associate · PMI: Fundamentals of Predictive Project Management · LinkedIn Learning: Engineering Drawings for Manufacturing, SOLIDWORKS: Advanced Engineering Drawings · HP LIFE: Customer Relationship Management
 
 ## Languages
 

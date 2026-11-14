@@ -76,7 +76,7 @@ Bachelor's in Mechanical Engineering, coursework almost complete (one module and
 
 ## Certifications
 
-Anthropic: Claude Code 101, Introduction to Agent Skills, Introduction to Subagents, Introduction to Model Context Protocol · Certified SOLIDWORKS Design Professional · Certified SOLIDWORKS Additive Manufacturing Associate · PMI: Fundamentals of Predictive Project Management
+Google AI Professional Certificate · Anthropic: Claude Code 101, Introduction to Agent Skills, Introduction to Subagents, Introduction to Model Context Protocol · Certified SOLIDWORKS Design Professional · Certified SOLIDWORKS Additive Manufacturing Associate · PMI: Fundamentals of Predictive Project Management
 
 ## Languages
 
