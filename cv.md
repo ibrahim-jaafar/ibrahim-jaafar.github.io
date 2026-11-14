@@ -16,17 +16,16 @@ AI specialist who builds LLM systems, automations and internal platforms that te
 ### AI Specialist, Blue House Films | Sep 2026 – present, remote
 Film and social media company, about 100 staff.
 
-- Built the company's secure internal platform as main developer on a 3-person R&D team: access checked on every request, two-factor sign-in, a key broker for 11 AI and web services, and self-monitoring with alerts. Shipped 9 tools in the first six weeks, now used daily by 50–60 staff.
-- Centralised company AI API keys behind a server-side broker with role-based access, so no employee or tool ever sees a key; marking someone as having left cuts their access to every tool at once.
-- Main developer of an automated multi-step AI pipeline that finds visual inserts for video scripts, with separate AI judges and editor ratings to evaluate them. It does in under 15 minutes the research that took writers hours, sometimes days.
-- Built a news-intelligence engine in one week that tracks 54 outlets in three languages and replaced the company's NewsWhip subscription.
+- Built the company's secure internal platform, now used daily by 50–60 staff, as main developer on a 3-person R&D team: 9 tools shipped in the first six weeks, two-factor sign-in and self-monitoring with alerts. Also review developers' code, supervise interns, train staff on each new tool and run AI workshops for the developers.
+- Designed its core rules in 60 architecture decision records, such as one deny-by-default permission check on every request and a server-side broker for 11 AI and web services, so no employee or tool ever sees a key and offboarding someone cuts every tool at once.
+- Cut visual-insert research for a video script from hours, sometimes days, to under 15 minutes as main developer of an automated multi-step AI pipeline, checked by separate AI judges and editor ratings.
+- Replaced the company's NewsWhip subscription with a news-intelligence engine, built in one week, that tracks 54 outlets in three languages.
 - Replaced Slack, WhatsApp and email for internal work with an in-house chat (about 55 daily users), removing paid Slack seats.
 - Built a task manager (about 50 daily users) that gives every task an owner, status and deadline, so managers see progress live instead of chasing updates.
-- Co-developed a subtitle cleaner that cut a 30–90 minute manual editing task to seconds; in daily use across the company's news platforms.
+- Cut a 30–90 minute manual subtitle-editing task to seconds by co-developing a subtitle cleaner, in daily use across the company's news platforms.
 - Built company email inside the platform with phishing warnings (fake colleagues, lookalike domains, risky attachments, misleading links) and a signed stamp proving mail came from the platform.
-- Also built the platform's HR records (setting a role sets the person's tool access), a ticket system for bugs and feature requests, and a device dashboard that checks staff hardware before software purchases and tracks which tools people actually use.
-- Host and secure the platform on an Oracle Cloud VPS monitored through the admin panel, with immutable Cloudflare R2 backups (30-day lock), backed by 1,400+ automated tests and 60 architecture decision records. Set up CI/CD on GitHub Actions: pull requests are tested, security-scanned and checked for leaked secrets, and backend changes deploy only after the tests pass.
-- Review developers' code, supervise interns, train staff on each new tool and run AI workshops for the developers.
+- Also built HR records (setting a role sets the person's tool access), a ticket system, and a device dashboard that checks staff hardware before software purchases and tracks real tool use.
+- Host and secure the platform on an Oracle Cloud VPS with immutable Cloudflare R2 backups (30-day lock) and 1,400+ automated tests. Set up CI/CD on GitHub Actions: pull requests are tested, security-scanned and checked for leaked secrets, and backend changes deploy only after the tests pass.
 
 ### Freelance Software Developer | 2023 – present
 
