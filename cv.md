@@ -72,7 +72,7 @@ Check all projects at ibrahim-jaafar.github.io/#projects
 
 ## Education
 
-Bachelor's studies in Mechanical Engineering (not completed)
+Bachelor's in Mechanical Engineering, coursework almost complete (one module and the final project remaining)
 
 ## Certifications
 
