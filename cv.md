@@ -39,7 +39,7 @@ Film and social media company, about 100 staff.
 Solar battery systems, industrial machines and custom CNC-made parts.
 
 - Designed products in SolidWorks and ran CNC machining and 3D printing, including maintenance and repair of the machines.
-- Built CurveMill, a CNC file optimiser, to fix the company's file bottleneck; it reduced one pattern from 7,014 lines to 274.
+- Built CurveMill, a CNC file optimiser that fixed a workflow bottleneck, cutting one pattern from 7,014 lines to 274.
 - Selected and installed SolidWorks PDM after comparing ERP, PDM and PLM systems, and built a Notion hub covering design, manufacturing, sales, finance and inventory.
 - Built a camera system that detects trucks and opens a client's gate automatically (YOLOv5, Arduino).
 
