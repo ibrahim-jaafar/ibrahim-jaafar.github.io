@@ -283,6 +283,8 @@ Freelance project. A privacy-focused desktop search app that combines results fr
 
 #### CurveMill: CNC file optimiser
 
+Code: https://github.com/ibrahim-jaafar/CurveMill
+
 Internal tool for Ghandour Solutions, built to fix a bottleneck in the company's CNC workflow. It cleans and repairs DXF cutting files and previews how the cutting tool will run. On real files it cut sketch elements from 3,383 to 540, and a 7,014-line pattern down to 274.
 
 - Finds sketch faults (open profiles, duplicate lines, shared corner points) and shows each one as a clickable warning that zooms to it.
