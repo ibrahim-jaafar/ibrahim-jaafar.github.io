@@ -112,11 +112,15 @@ A news-intelligence engine for the company's newsrooms.
 
 - Collects news from RSS feeds, GDELT and outlet scraping, then groups articles about the same event into stories across languages using AI embeddings.
 - Links names to Wikidata, tags topics with AI, and searches by tags, words and meaning.
+- Finds the places and political actors each story is about with two NER models (XLM-RoBERTa, and CAMeLBERT for Arabic), using 7,794 parties, armed groups and politicians and 2,141 Lebanese villages loaded from Wikidata. On a hand-checked set of 150 articles it made 1 false match and missed 3.
+- A research assistant answers a journalist's question from the engine's own stories and cites the stories it used (retrieval-augmented generation).
+- AI output is checked by code: a name the AI suggests is kept only if it appears in the story's text, cited stories must be ones it was sent, and every prompt marks news text as untrusted. It works with any OpenAI-compatible model, so no paid service is needed.
+- A live map of the engine, drawn from the code: 28 nested views with live numbers and health lights.
 - Raises breaking-news alerts and shows verification signals: who confirms a story and where it started.
 - Each outlet has a research profile covering ownership, funding and leaning. It starts with 54 outlets in Arabic, English and French.
 - A newsroom screen with movable dashboard panels, a search builder, leaderboards of which outlets break stories first, and exports to CSV, JSON and PDF.
 - Alerts and AI digests in the app or by email, Telegram and Slack. AI use has daily request and spending caps.
-- Built in one week by studying a leading commercial tool (NewsWhip Spike) feature by feature, and it replaced the company's NewsWhip subscription. About 9,500 lines with 257 automated tests.
+- The first version was built in one week by studying a leading commercial tool (NewsWhip Spike) feature by feature, and it replaced the company's NewsWhip subscription. Now about 12,000 lines with 310 automated tests.
 - Tech: Django, PostgreSQL + pgvector, React, AI embeddings.
 
 ### Insert Suggester

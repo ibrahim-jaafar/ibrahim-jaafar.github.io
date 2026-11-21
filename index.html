@@ -487,11 +487,15 @@ footer{padding:56px 0;color:var(--muted);font-size:14px;border-top:1px solid var
     <ul>
       <li>Collects news from RSS feeds, GDELT and outlet scraping, then groups articles about the same event into stories across languages using AI embeddings.</li>
       <li>Links names to Wikidata, tags topics with AI, and searches by tags, words and meaning.</li>
+      <li>Finds the places and political actors each story is about with two NER models (XLM-RoBERTa, and CAMeLBERT for Arabic), using 7,794 parties, armed groups and politicians and 2,141 Lebanese villages loaded from Wikidata. On a hand-checked set of 150 articles it made 1 false match and missed 3.</li>
+      <li>A research assistant answers a journalist's question from the engine's own stories and cites the stories it used (retrieval-augmented generation).</li>
+      <li>AI output is checked by code: a name the AI suggests is kept only if it appears in the story's text, cited stories must be ones it was sent, and every prompt marks news text as untrusted. It works with any OpenAI-compatible model, so no paid service is needed.</li>
+      <li>A live map of the engine, drawn from the code: 28 nested views with live numbers and health lights.</li>
       <li>Raises breaking-news alerts and shows verification signals: who confirms a story and where it started.</li>
       <li>Each outlet has a research profile covering ownership, funding and leaning. It starts with 54 outlets in Arabic, English and French.</li>
       <li>A newsroom screen with movable dashboard panels, a search builder, leaderboards of which outlets break stories first, and exports to CSV, JSON and PDF.</li>
       <li>Alerts and AI digests in the app or by email, Telegram and Slack. AI use has daily request and spending caps.</li>
-      <li>Built in one week by studying a leading commercial tool (NewsWhip Spike) feature by feature, and it replaced the company's NewsWhip subscription. About 9,500 lines with 257 automated tests.</li>
+      <li>The first version was built in one week by studying a leading commercial tool (NewsWhip Spike) feature by feature, and it replaced the company's NewsWhip subscription. Now about 12,000 lines with 310 automated tests.</li>
     </ul>
     <div class="tags"><span>Django</span><span>PostgreSQL + pgvector</span><span>React</span><span>AI embeddings</span></div>
     <div class="shots"><img src="img/news-1.webp" alt="Newsroom engine: newsroom screen with a combined timeline for four searches, a stories list with outlet counts, and a story panel showing which outlets picked it up and when" loading="lazy"><img src="img/news-2.webp" alt="Newsroom engine: live system map from ingestion and data sources through embedding and clustering, entity and topic extraction, hybrid retrieval, story metrics, retention and alerting" loading="lazy"></div>
