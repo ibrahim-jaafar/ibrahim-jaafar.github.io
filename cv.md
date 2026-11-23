@@ -19,7 +19,7 @@ Film and social media company, about 100 staff.
 - Built the company's secure internal platform, now used daily by 50–60 staff, as main developer on a 3-person R&D team: 9 tools shipped in the first six weeks, two-factor sign-in and self-monitoring with alerts. Also wrote the plugin guide and coding rules the other developers build by, review their code, supervise interns and run AI workshops for the developers.
 - Designed its core rules in 60 architecture decision records, such as one deny-by-default permission check on every request and a server-side broker for 11 AI and web services, so no employee or tool ever sees a key and offboarding someone cuts every tool at once.
 - Cut visual-insert research for a video script from hours, sometimes days, to under 15 minutes as main developer of an automated multi-step AI pipeline, checked by separate AI judges and editor ratings.
-- Replaced the company's NewsWhip subscription with a news-intelligence engine, built in one week, that tracks 54 researched outlets in three languages and finds new ones by itself (200+ so far).
+- Replaced the company's NewsWhip subscription with a news-intelligence engine, built in one week, that monitors 54 researched outlets in three languages and discovers new ones automatically (200+ so far).
 - Replaced Slack, WhatsApp and email for internal work with an in-house chat (about 55 daily users), removing paid Slack seats.
 - Built a task manager (about 50 daily users) that gives every task an owner, status and deadline, so managers see progress live instead of chasing updates.
 - Cut a 30–90 minute manual subtitle-editing task to seconds by co-developing a subtitle cleaner, in daily use across the company's news platforms.
