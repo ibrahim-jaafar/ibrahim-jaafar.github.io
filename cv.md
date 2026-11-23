@@ -71,7 +71,7 @@ Check all projects at ibrahim-jaafar.github.io/#projects
 
 ## Education
 
-Bachelor's in Mechanical Engineering, coursework almost complete (one module and the final project remaining)
+Bachelor's in Mechanical Engineering, not completed: studies stopped by Lebanon's economic collapse with one module and the final project left
 
 ## Certifications
 
